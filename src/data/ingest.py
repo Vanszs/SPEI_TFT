@@ -7,7 +7,7 @@ from math import asin, cos, radians, sin, sqrt
 import pandas as pd
 import requests
 
-SCHEMA_VERSION = 2
+from src.schema import SCHEMA_VERSION
 
 DEFAULT_CITY_CONFIG_PATH = "data/config/city_centers.json"
 
@@ -168,7 +168,13 @@ def fetch_node_data(node_meta, max_retries=3):
             df["distance_km_from_city_center"] = node_meta[
                 "distance_km_from_city_center"
             ]
-            df["elevation"] = payload.get("elevation", 0.0)
+            elevation = payload.get("elevation")
+            if elevation is None:
+                raise ValueError(
+                    f"Open-Meteo response for {node_name} has no 'elevation'; "
+                    "cannot fabricate a static feature value."
+                )
+            df["elevation"] = float(elevation)
             return df
 
         except Exception as exc:

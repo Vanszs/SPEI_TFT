@@ -15,8 +15,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src.models.dataset import MODEL_GROUP_COL, create_dataset
 from src.models.tft import load_tft_checkpoint
+from src.schema import SCHEMA_VERSION
 
-EXPECTED_SCHEMA_VERSION = 2
+EXPECTED_SCHEMA_VERSION = SCHEMA_VERSION
 
 warnings.filterwarnings(
     "ignore",

@@ -18,8 +18,9 @@ from pytorch_forecasting import TimeSeriesDataSet
 
 from src.models.dataset import MODEL_GROUP_COL, create_dataset
 from src.models.tft import build_tft_model
+from src.schema import SCHEMA_VERSION
 
-EXPECTED_SCHEMA_VERSION = 2
+EXPECTED_SCHEMA_VERSION = SCHEMA_VERSION
 DEFAULT_SEED = 42
 
 

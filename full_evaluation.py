@@ -48,8 +48,9 @@ from src.evaluation.calibration import (
 )
 from src.models.dataset import MODEL_GROUP_COL, create_dataset
 from src.models.tft import load_tft_checkpoint
+from src.schema import SCHEMA_VERSION
 
-EXPECTED_SCHEMA_VERSION = 2
+EXPECTED_SCHEMA_VERSION = SCHEMA_VERSION
 sns.set_theme(style="whitegrid", font_scale=1.0)
 
 
@@ -449,30 +450,18 @@ def run(checkpoint_path: str, out_dir: Path, log_fp):
                 "picp_per_city_after": picp_after_city,
             }
 
-    # GAP-B: Event detection (drought SPEI <= -1.5 primary, -1.0 secondary)
-    def _event_metrics(actual_arr, pred_arr, threshold):
-        actual_event = actual_arr <= threshold
-        pred_event = pred_arr <= threshold
-        hits = int(np.sum(actual_event & pred_event))
-        misses = int(np.sum(actual_event & ~pred_event))
-        false_alarms = int(np.sum(~actual_event & pred_event))
-        pod = hits / (hits + misses) if (hits + misses) > 0 else None
-        far = false_alarms / (hits + false_alarms) if (hits + false_alarms) > 0 else None
-        precision = hits / (hits + false_alarms) if (hits + false_alarms) > 0 else None
-        recall = pod
-        f1 = (2 * precision * recall / (precision + recall)) if (precision and recall and (precision + recall) > 0) else None
-        csi = hits / (hits + misses + false_alarms) if (hits + misses + false_alarms) > 0 else None
-        return {"hits": hits, "misses": misses, "false_alarms": false_alarms, "pod": pod, "far": far, "f1": f1, "csi": csi}
+    # GAP-B: Event detection (canonical implementation in src.evaluation.event_metrics)
+    from src.evaluation.event_metrics import contingency as _contingency
 
     event_detection = {}
     for thresh_name, thresh_val in [("severe_1.5", -1.5), ("moderate_1.0", -1.0)]:
         # Overall (pooled all-horizon)
-        ev_overall = _event_metrics(np.array(all_h_actuals), np.array(all_h_preds), thresh_val)
+        ev_overall = _contingency(all_h_actuals, all_h_preds, thresh_val)
         # Per city (step-0 from df)
         ev_per_city = {}
         for city in cities:
             sub = df[df["city_id"].astype(str) == city]
-            ev_per_city[city] = _event_metrics(sub["actual"].values, sub["pred_p50"].values, thresh_val)
+            ev_per_city[city] = _contingency(sub["actual"].values, sub["pred_p50"].values, thresh_val)
         event_detection[thresh_name] = {"overall_all_horizons": ev_overall, "per_city_step0": ev_per_city}
 
     # GAP-B: Event detection plot

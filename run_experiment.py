@@ -93,13 +93,6 @@ def _checkpoint_from_run_config() -> Path | None:
     return None
 
 
-def _latest_eval_dir() -> Path:
-    dirs = sorted(RESULTS_DIR.glob("full_eval_*"), reverse=True)
-    if not dirs:
-        raise FileNotFoundError("No full_eval_* directory found in results/")
-    return dirs[0]
-
-
 def _load_metrics(eval_dir: Path) -> dict:
     p = eval_dir / "metrics_summary.json"
     if p.exists():
@@ -310,15 +303,14 @@ def main():
         for d in RESULTS_DIR.glob("full_eval_*"):
             shutil.rmtree(d)
             print(f"  Removed {d.name}")
-        # Remove loose files
-        for f in RESULTS_DIR.glob("*.csv"):
-            f.unlink(); print(f"  Removed {f.name}")
-        for f in RESULTS_DIR.glob("*.json"):
-            f.unlink(); print(f"  Removed {f.name}")
-        for f in RESULTS_DIR.glob("*.txt"):
-            f.unlink(); print(f"  Removed {f.name}")
-        for f in RESULTS_DIR.glob("*.png"):
-            f.unlink(); print(f"  Removed {f.name}")
+        # Remove loose files, but preserve thesis BAB III artifacts.
+        KEEP = {"bab3_evaluation.json", "bab3_baseline_metrics.json",
+                "bab3_node_weight_sensitivity.json"}
+        for pattern in ("*.csv", "*.json", "*.txt", "*.png"):
+            for f in RESULTS_DIR.glob(pattern):
+                if f.name in KEEP:
+                    continue
+                f.unlink(); print(f"  Removed {f.name}")
     RESULTS_DIR.mkdir(exist_ok=True)
     print("  results/ cleared OK")
 

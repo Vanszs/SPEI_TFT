@@ -20,7 +20,9 @@ OUT_DIR = ROOT / "results" / "maps"
 OUT_HTML = OUT_DIR / "final_grid_leaflet.html"
 
 # Square size in kilometers for each final node cell.
-CELL_SIZE_KM = 8.0
+# Aligned to ingest node spacing (~0.12 deg lat ~= 13.3 km); must match
+# scripts/plot_final_grid_cartopy_google.py:CELL_SIZE_KM.
+CELL_SIZE_KM = 13.3
 
 
 def _square_bounds(lat: float, lon: float, side_km: float) -> list[list[float]]:

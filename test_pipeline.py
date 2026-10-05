@@ -14,8 +14,21 @@ sys.path.insert(0, ".")
 PASS = "[PASS]"
 FAIL = "[FAIL]"
 WARN = "[WARN]"
-EXPECTED_SCHEMA_VERSION = 2
 PROCESSED_DATA_PATH = None
+
+# Accumulate failures so the script exits non-zero instead of always 0.
+FAILURES = []
+
+
+def record_failure(message):
+    FAILURES.append(message)
+    print(f"{FAIL} {message}")
+
+
+def _fail():
+    """Tag helper for boolean-tag sites: records the failure and returns FAIL."""
+    record_failure("check failed")
+    return FAIL
 
 
 def section(title):
@@ -103,6 +116,7 @@ try:
     )
     from src.training.train import train_pipeline
     from src.evaluation.metrics import load_model, calculate_metrics
+    from src.schema import SCHEMA_VERSION as EXPECTED_SCHEMA_VERSION
     print(f"{PASS} All src imports OK")
     print(f"{PASS} MAX_ENCODER_LENGTH = {MAX_ENCODER_LENGTH}  (expected 90)")
     print(f"{PASS} MAX_PREDICTION_LENGTH = {MAX_PREDICTION_LENGTH}  (expected 30)")
@@ -134,7 +148,7 @@ for val, expected in cases:
     ok = got == expected
     if not ok:
         all_ok = False
-    tag = PASS if ok else FAIL
+    tag = PASS if ok else _fail()
     print(f"  {tag}  {val:+.1f} -> {got}  (expected: {expected})")
 if all_ok:
     print(f"{PASS} All 9 SPEI classes correct")
@@ -174,7 +188,7 @@ try:
 
     # NaN check
     nan_total = data.isna().sum().sum()
-    tag = PASS if nan_total == 0 else FAIL
+    tag = PASS if nan_total == 0 else _fail()
     print(f"  {tag}  NaN count = {nan_total}  (expected 0)")
 
     # Shape
@@ -184,23 +198,23 @@ try:
     # Schema/cardinality checks (dynamic, not hardcoded city list)
     n_city = data["city_id"].nunique()
     n_entity = data[MODEL_GROUP_COL].nunique()
-    tag_city = PASS if n_city >= 1 else FAIL
-    tag_entity = PASS if n_entity >= 1 else FAIL
+    tag_city = PASS if n_city >= 1 else _fail()
+    tag_entity = PASS if n_entity >= 1 else _fail()
     print(f"  {tag_city}  city_id nunique = {n_city} (expected >=1)")
     print(f"  {tag_entity}  {MODEL_GROUP_COL} nunique = {n_entity} (expected >=1)")
-    tag_card = PASS if n_entity == n_city else FAIL
+    tag_card = PASS if n_entity == n_city else _fail()
     print(f"  {tag_card}  model entities == cities ({n_entity} == {n_city}) for 1 super-node per city")
-    tag_sel = PASS if (data["selected_node_count"] == 5).all() else FAIL
+    tag_sel = PASS if (data["selected_node_count"] == 5).all() else _fail()
     print(f"  {tag_sel}  selected_node_count == 5 for all rows")
 
     # Group uniqueness checks (post-aggregation)
     dup_entity_time = data.duplicated(subset=[MODEL_GROUP_COL, "time_idx"]).sum()
-    tag_dup = PASS if dup_entity_time == 0 else FAIL
+    tag_dup = PASS if dup_entity_time == 0 else _fail()
     print(f"  {tag_dup}  duplicate ({MODEL_GROUP_COL}, time_idx) = {dup_entity_time}")
     dup_city_time = data.duplicated(subset=["city_id", "time_idx"]).sum()
-    tag_dup_city = PASS if dup_city_time == 0 else FAIL
+    tag_dup_city = PASS if dup_city_time == 0 else _fail()
     print(f"  {tag_dup_city}  duplicate (city_id, time_idx) = {dup_city_time}")
-    tag_group_name = PASS if MODEL_GROUP_COL == "super_node_id" else FAIL
+    tag_group_name = PASS if MODEL_GROUP_COL == "super_node_id" else _fail()
     print(f"  {tag_group_name}  MODEL_GROUP_COL == 'super_node_id'")
 
     # Optional raw schema-v2 uniqueness checks (pre-aggregation)
@@ -210,7 +224,7 @@ try:
         if {"schema_version", "node_id", "raw_node_id", "time"}.issubset(raw.columns):
             dup_node_time = raw.duplicated(subset=["node_id", "time"]).sum()
             dup_raw_time = raw.duplicated(subset=["raw_node_id", "time"]).sum()
-            tag_raw = PASS if (dup_node_time == 0 and dup_raw_time == 0) else FAIL
+            tag_raw = PASS if (dup_node_time == 0 and dup_raw_time == 0) else _fail()
             print(f"  {tag_raw}  raw duplicate (node_id,time)={dup_node_time}, (raw_node_id,time)={dup_raw_time}")
         else:
             print(f"  {WARN}  raw file exists but not schema v2; uniqueness check skipped")
@@ -219,8 +233,8 @@ try:
     base_dir = os.path.dirname(PROCESSED_DATA_PATH) if PROCESSED_DATA_PATH else "data/processed"
     meta_path = os.path.join(base_dir, "node_selection_v2.meta.json")
     sel_path = os.path.join(base_dir, "node_selection_v2.parquet")
-    tag_meta = PASS if os.path.exists(meta_path) else FAIL
-    tag_sel_art = PASS if os.path.exists(sel_path) else FAIL
+    tag_meta = PASS if os.path.exists(meta_path) else _fail()
+    tag_sel_art = PASS if os.path.exists(sel_path) else _fail()
     print(f"  {tag_meta}  selection metadata exists: {meta_path}")
     print(f"  {tag_sel_art}  selection artifact exists: {sel_path}")
 
@@ -247,12 +261,12 @@ try:
         g_sorted = g.sort_values("time")
         diffs = g_sorted.time_idx.diff().dropna()
         if not (diffs >= 0).all():
-            print(f"{FAIL} time_idx not monotone for {loc}")
+            record_failure(f"time_idx not monotone for {loc}")
         else:
             print(f"  {PASS}  time_idx monotone: {loc}")
 
 except Exception as e:
-    print(f"{FAIL} {e}")
+    record_failure(str(e))
     traceback.print_exc()
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -266,12 +280,12 @@ try:
     entities = [f"ent_{i:02d}" for i in range(8)]
     rows, cols = _grid(len(entities), max_cols=3)
     pal = _palette(entities)
-    tag_grid = PASS if (rows * cols >= len(entities)) else FAIL
-    tag_pal = PASS if len(pal) == len(entities) else FAIL
+    tag_grid = PASS if (rows * cols >= len(entities)) else _fail()
+    tag_pal = PASS if len(pal) == len(entities) else _fail()
     print(f"  {tag_grid}  dynamic grid capacity rows*cols={rows*cols} for n={len(entities)}")
     print(f"  {tag_pal}  dynamic palette size={len(pal)} for n={len(entities)}")
 except Exception as e:
-    print(f"{FAIL} {e}")
+    record_failure(str(e))
     traceback.print_exc()
 
 section("TEST 4: TimeSeriesDataSet creation + dataloader")
@@ -292,18 +306,18 @@ try:
 
     # static_reals must contain spatial constants
     for feat in ["elevation", "lat", "lon"]:
-        tag = PASS if feat in train_ds.static_reals else FAIL
+        tag = PASS if feat in train_ds.static_reals else _fail()
         print(f"  {tag}  {feat} in static_reals")
-    tag = PASS if MODEL_GROUP_COL in train_ds.static_categoricals else FAIL
+    tag = PASS if MODEL_GROUP_COL in train_ds.static_categoricals else _fail()
     print(f"  {tag}  {MODEL_GROUP_COL} in static_categoricals")
     # S1/S2: city_id is collinear with super_node_id and was intentionally dropped
     # from static_categoricals to avoid redundant embeddings.
-    tag = PASS if "city_id" not in train_ds.static_categoricals else FAIL
+    tag = PASS if "city_id" not in train_ds.static_categoricals else _fail()
     print(f"  {tag}  city_id NOT in static_categoricals (S1/S2: single entity key)")
 
     # key features present
     for feat in ["water_deficit", "SPEI_3", "SPEI_3_diff"]:
-        tag = PASS if feat in train_ds.time_varying_unknown_reals else FAIL
+        tag = PASS if feat in train_ds.time_varying_unknown_reals else _fail()
         print(f"  {tag}  {feat} in time_varying_unknown_reals")
 
     # dataloader batch check
@@ -315,7 +329,7 @@ try:
     print(f"{PASS} Batch shapes â€” enc_cont:{enc_shape}, dec_cont:{dec_shape}, target:{tgt_shape}")
 
     has_nan = bx["encoder_cont"].isnan().any().item()
-    tag = PASS if not has_nan else FAIL
+    tag = PASS if not has_nan else _fail()
     print(f"  {tag}  No NaN in encoder_cont batch")
 
     # Val dataset from train schema
@@ -326,7 +340,7 @@ try:
     print(f"{PASS} Val TimeSeriesDataSet: {len(val_ds)} sequences")
 
 except Exception as e:
-    print(f"{FAIL} {e}")
+    record_failure(str(e))
     traceback.print_exc()
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -376,7 +390,7 @@ try:
     p = preds.output.prediction.cpu()
     print(f"{PASS} Predictions shape: {p.shape}  (expected: [N, 30, 3])")
 
-    tag = PASS if p.shape[2] == 3 else FAIL
+    tag = PASS if p.shape[2] == 3 else _fail()
     print(f"  {tag}  Quantile dim = {p.shape[2]}  (expected 3)")
 
     p50 = p[:, :, 1].numpy()
@@ -410,7 +424,7 @@ try:
     print(f"  {tag}  RMSE < 2.0 (sane for SPEI Z-score scale)")
 
 except Exception as e:
-    print(f"{FAIL} {e}")
+    record_failure(str(e))
     traceback.print_exc()
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -442,7 +456,7 @@ try:
     print(f"  {tag}  |Bias| < 0.5  (got {abs(ov['bias']):.4f})")
     tag = PASS if ov["pearson_r"] > 0 else WARN
     print(f"  {tag}  Pearson r > 0  (positive correlation)")
-    tag = PASS if ov["samples"] > 0 else FAIL
+    tag = PASS if ov["samples"] > 0 else _fail()
     print(f"  {tag}  Samples > 0  (got {ov['samples']})")
 
     # Per-location
@@ -453,10 +467,13 @@ try:
         print(f"    {loc:12s}  RMSE={r['rmse']:.4f}  MAE={r['mae']:.4f}  r={r['pearson_r']:.4f}")
 
 except Exception as e:
-    print(f"{FAIL} {e}")
+    record_failure(str(e))
     traceback.print_exc()
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section("PIPELINE TEST COMPLETE")
 print("Check output files in results/ for saved plots and CSVs.")
+if FAILURES:
+    print(f"\n{FAIL} {len(FAILURES)} check(s) failed.")
+    sys.exit(1)
 

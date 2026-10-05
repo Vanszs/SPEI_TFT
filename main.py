@@ -10,9 +10,10 @@ sys.path.append(os.getcwd())
 
 from src.data.ingest import main as ingest_data
 from src.data.preprocess import preprocess_pipeline
+from src.schema import SCHEMA_VERSION
 from src.training.train import train_pipeline
 
-EXPECTED_SCHEMA_VERSION = 2
+EXPECTED_SCHEMA_VERSION = SCHEMA_VERSION
 RAW_PATH = "data/raw/weather_history_east_java.parquet"
 PROCESSED_PATH = "data/processed/spei_dataset.parquet"
 
@@ -135,7 +136,7 @@ def main():
                 )
     except Exception as exc:
         print(f"Ingestion failed: {exc}")
-        return
+        sys.exit(1)
 
     print("\n--- STEP 2: PREPROCESSING ---")
     processed_required = {"schema_version", "city_id", "super_node_id", "selected_node_count"}
@@ -149,7 +150,7 @@ def main():
         )
     except Exception as exc:
         print(f"Preprocessing failed: {exc}")
-        return
+        sys.exit(1)
 
     print("\n--- STEP 3: TRAINING ---")
     if args.skip_train:
@@ -164,7 +165,7 @@ def main():
             print(f"Training completed. Model saved at {best_model_path}")
         except Exception as exc:
             print(f"Training failed: {exc}")
-            return
+            sys.exit(1)
 
     print("\n=== PIPELINE FINISHED ===")
     print("Now run evaluation: python full_evaluation.py")

@@ -1,14 +1,15 @@
 import os
 import json
 import hashlib
-from math import asin, cos, radians, sin, sqrt
+import warnings
 
 import numpy as np
 import pandas as pd
 
+from src.schema import SCHEMA_VERSION
+from .ingest import haversine_km
 from .spei import calculate_spei, calculate_water_deficit
 
-SCHEMA_VERSION = 2
 SELECTION_END_DATE = "2022-12-31"
 DEFAULT_TOP_K = 5
 DEFAULT_SEED = 42
@@ -23,17 +24,6 @@ WEATHER_COLS = [
     "shortwave_radiation_sum",
     "wind_speed_10m_mean",
 ]
-
-
-def haversine_km(lat1, lon1, lat2, lon2):
-    radius = 6371.0
-    d_lat = radians(lat2 - lat1)
-    d_lon = radians(lon2 - lon1)
-    a = (
-        sin(d_lat / 2) ** 2
-        + cos(radians(lat1)) * cos(radians(lat2)) * sin(d_lon / 2) ** 2
-    )
-    return 2 * radius * asin(sqrt(a))
 
 
 def _validate_raw_schema(df):
@@ -61,7 +51,6 @@ def _validate_raw_schema(df):
 
 
 def _interpolate_per_node(df):
-    import warnings
     dfs = []
     for raw_node_id, group in df.groupby("raw_node_id", sort=True):
         group = group.sort_values("time").copy()
@@ -105,7 +94,7 @@ def _compute_similarity(df_train):
                     continue
                 corr_scores.append(float(np.corrcoef(a, b)[0, 1]))
 
-            behavior_score = float(np.nanmean(corr_scores)) if corr_scores else -1.0
+            behavior_score = float(np.nanmean(corr_scores)) if corr_scores else np.nan
             lat = float(node_df["lat"].iloc[0])
             lon = float(node_df["lon"].iloc[0])
             dist_km = haversine_km(city_center_lat, city_center_lon, lat, lon)
@@ -132,6 +121,16 @@ def _select_top_k_nodes(similarity_df, top_k):
     selected = []
     for city_id, group in similarity_df.groupby("city_id", sort=True):
         group = group.copy()
+        # Nodes with no valid correlation pairs have an unmeasured behavior score
+        # (NaN). They must not silently rank as if measured — drop them and say so.
+        unmeasured = group["behavior_score"].isna()
+        if unmeasured.any():
+            dropped = group.loc[unmeasured, "raw_node_id"].tolist()
+            print(
+                f"WARNING: {city_id}: dropping {len(dropped)} node(s) with "
+                f"unmeasured behavior_score: {dropped}"
+            )
+            group = group.loc[~unmeasured]
         # Clamp floating noise before sorting to stabilize tie behavior across reruns.
         for c in ["hybrid_score", "behavior_score", "distance_score"]:
             group[c] = group[c].round(12)

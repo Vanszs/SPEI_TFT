@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import time
+from datetime import datetime
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -16,14 +17,17 @@ from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel, Field
 import uvicorn
 from pathlib import Path
+import numpy as np
 import pandas as pd
+
+from src.data.spei import calculate_spei, classify_spei
 
 
 # --- Pydantic Schemas ---
 
 class PredictRequest(BaseModel):
-    city_id: str = Field(..., example="surabaya", description="City identifier")
-    forecast_days: int = Field(default=30, ge=1, le=90, description="Forecast horizon in days")
+    city_id: str = Field(..., example="Bojonegoro", description="City identifier")
+    forecast_days: int = Field(default=30, ge=1, le=30, description="Forecast horizon in days (model max 30)")
 
 class QuantilePredictions(BaseModel):
     p10: List[float] = Field(..., description="10th percentile SPEI predictions")
@@ -86,23 +90,37 @@ class StudyResponse(BaseModel):
 # --- Model Management / Lifetime ---
 
 class AppState:
-    tft_model: Any = None
     is_ready: bool = False
+    bundle: Any = None
+    load_error: Optional[str] = None
 
 app_state = AppState()
 
+def ensure_bundle():
+    """Lazily build the TFT inference bundle once (checkpoint load is slow)."""
+    if app_state.bundle is not None:
+        return app_state.bundle
+    if app_state.load_error is not None:
+        return None
+    try:
+        from src.evaluation.inference import build_bundle
+
+        app_state.bundle = build_bundle(
+            checkpoint_path=os.getenv("TFT_CHECKPOINT_PATH") or None
+        )
+        app_state.is_ready = True
+    except Exception as exc:
+        app_state.bundle = None
+        app_state.load_error = str(exc)
+        app_state.is_ready = False
+    return app_state.bundle
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load model checkpoint if available
-    checkpoint_path = os.getenv("TFT_CHECKPOINT_PATH", "models/best_tft.ckpt")
-    if os.path.exists(checkpoint_path):
-        # ponytail: CPU load by default, GPU if CUDA available
-        app_state.is_ready = True
-    else:
-        app_state.is_ready = False
+    # Startup: eager-load so /health reflects real readiness; endpoint also re-checks.
+    ensure_bundle()
     yield
-    # Shutdown: Clean up resources
-    app_state.tft_model = None
+    app_state.bundle = None
 
 app = FastAPI(
     title="TFT Drought Monitoring & SPEI API",
@@ -127,9 +145,11 @@ def _study_paths() -> tuple[Path, Path]:
     return root / "data/processed/spei_dataset.parquet", root / "results/full_eval_20260602_063310/predictions_full.csv"
 
 def _spei_label(value: float) -> str:
+    # 4-class frontend contract (NORMAL|MODERATE|SEVERE|EXTREME).
+    # Boundaries mirror the canonical WMO classes in src.data.spei.classify_spei.
     if value <= -2.0: return "EXTREME"
     if value <= -1.5: return "SEVERE"
-    if value <= -0.5: return "MODERATE"
+    if value <= -1.0: return "MODERATE"
     return "NORMAL"
 
 @app.get("/api/v1/study/regions", response_model=StudyResponse, tags=["Study"])
@@ -137,7 +157,6 @@ async def study_regions():
     """Expose verified thesis artifacts; no fabricated future forecast."""
     data_path, pred_path = _study_paths()
     raw_path = data_path.parent.parent / "raw/weather_history_east_java.parquet"
-    selection_path = data_path.parent / "node_selection_v2.parquet"
     if not data_path.exists() or not pred_path.exists():
         raise HTTPException(status_code=503, detail="Artefak data penelitian belum tersedia.")
     data = pd.read_parquet(data_path, columns=["city_id", "time", "SPEI_3", "lat", "lon"])
@@ -197,6 +216,10 @@ async def study_regions():
     for city in sorted(data["city_id"].astype(str).unique()):
         city_data = data[data["city_id"].astype(str) == city].sort_values("time")
         city_preds = preds[preds["city_id"].astype(str) == city].sort_values("time")
+        pred_by_date = {
+            pd.Timestamp(r.time).date().isoformat(): float(r.pred_p50)
+            for r in city_preds.itertuples()
+        }
         latest = city_data.iloc[-1]
         latest_pred = city_preds.iloc[-1] if not city_preds.empty else None
         regions.append(StudyRegionResponse(
@@ -208,7 +231,14 @@ async def study_regions():
             severity=_spei_label(float(latest["SPEI_3"])),
             latest_observation=latest["time"].date().isoformat(),
             evaluation_prediction=(StudyQuantiles(p10=float(latest_pred["pred_p10"]), p50=float(latest_pred["pred_p50"]), p90=float(latest_pred["pred_p90"])) if latest_pred is not None else None),
-            historical_spei=[{"month": row.time.strftime("%d %b %Y"), "actual": float(row.SPEI_3), "predicted": float(row.SPEI_3)} for row in city_data.tail(6).itertuples()],
+            historical_spei=[
+                {
+                    "month": row.time.strftime("%d %b %Y"),
+                    "actual": float(row.SPEI_3),
+                    "predicted": pred_by_date.get(row.time.date().isoformat()),
+                }
+                for row in city_data.tail(6).itertuples()
+            ],
         ))
     return StudyResponse(
         data_status="DATA PENELITIAN · observasi dan evaluasi model",
@@ -232,19 +262,25 @@ async def health_check():
 @app.post("/api/v1/predict", response_model=PredictResponse, tags=["Prediction"])
 async def predict_spei(payload: PredictRequest):
     """
-    Generate SPEI forecast using TFT model for a target city.
+    Generate a real SPEI forecast from the loaded TFT checkpoint.
     """
-    # Placeholder/Inference logic using loaded TFT model
-    dates = [f"2026-08-{i+1:02d}" for i in range(payload.forecast_days)]
-    p50 = [-0.5 - (i * 0.01) for i in range(payload.forecast_days)]
-    p10 = [val - 0.4 for val in p50]
-    p90 = [val + 0.4 for val in p50]
-    
+    bundle = ensure_bundle()
+    if bundle is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Model not available: {app_state.load_error or 'not loaded'}",
+        )
+    try:
+        out = bundle.forecast(payload.city_id, payload.forecast_days)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+    p50 = out["p50"]
     return PredictResponse(
         city_id=payload.city_id,
-        dates=dates,
-        predictions=QuantilePredictions(p10=p10, p50=p50, p90=p90),
-        drought_risk_level="Mild Drought"
+        dates=out["dates"],
+        predictions=QuantilePredictions(p10=out["p10"], p50=p50, p90=out["p90"]),
+        drought_risk_level=_spei_label(float(np.median(p50))),
     )
 
 @app.post("/api/v1/spei/calculate", response_model=SPEICalculateResponse, tags=["SPEI"])
@@ -259,49 +295,95 @@ async def calculate_spei_endpoint(payload: SPEICalculateRequest):
         )
     
     deficit = [p - et for p, et in zip(payload.precipitation, payload.evapotranspiration)]
-    # ponytail: Return dummy values for endpoints test, production uses src.data.spei.calculate_spei
-    spei_res = [None if i < payload.scale * 30 else 0.1 for i in range(len(deficit))]
-    
+    # Real SPEI via the canonical implementation. Daily series indexed to a
+    # contiguous date range so the month-based fisk fit has a valid index.
+    index = pd.date_range(start="2000-01-01", periods=len(deficit), freq="D")
+    series = pd.Series(deficit, index=index, dtype=float)
+    spei_series = calculate_spei(series, scale=payload.scale)
+    spei_res = [None if pd.isna(v) else float(v) for v in spei_series]
+
     return SPEICalculateResponse(water_deficit=deficit, spei=spei_res)
 
 @app.get("/api/v1/ingest/status", response_model=IngestionStatusResponse, tags=["Ingestion"])
 async def ingest_status():
     """
-    Check current OpenMeteo ingestion and data pipeline status.
+    Real ingestion/pipeline status derived from the processed dataset artifact.
     """
-    return IngestionStatusResponse(
-        status="synced",
-        last_sync="2026-07-23T00:00:00Z",
-        nodes_synced=81
-    )
+    root = Path(__file__).resolve().parent.parent
+    raw_path = root / "data/raw/weather_history_east_java.parquet"
+    proc_path = root / "data/processed/spei_dataset.parquet"
+    if not proc_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Artefak data penelitian belum tersedia.",
+        )
+    nodes = 0
+    if raw_path.exists():
+        raw = pd.read_parquet(raw_path, columns=["raw_node_id"])
+        nodes = int(raw["raw_node_id"].nunique())
+    last_sync = datetime.utcfromtimestamp(proc_path.stat().st_mtime).isoformat() + "Z"
+    return IngestionStatusResponse(status="synced", last_sync=last_sync, nodes_synced=nodes)
 
 
 # --- Real-Time Streaming: SSE & WebSocket ---
 
-# 1. SSE Stream: Live Weather Sync & Inference State Updates
+# 1. SSE Stream: Latest real weather observations & inference state
+def _latest_weather(city_id: str) -> dict:
+    """Most recent real weather observations + latest SPEI for a city."""
+    root = Path(__file__).resolve().parent.parent
+    proc_path = root / "data/processed/spei_dataset.parquet"
+    if not proc_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Artefak data penelitian belum tersedia.",
+        )
+    per_city = globals().setdefault("_WEATHER_CACHE", {})
+    if city_id not in per_city:
+        cols = [
+            "city_id", "time", "SPEI_3", "temperature_2m_max",
+            "relative_humidity_2m_mean", "precipitation_sum",
+            "et0_fao_evapotranspiration",
+        ]
+        df = pd.read_parquet(proc_path, columns=cols).sort_values("time")
+        per_city[city_id] = df[df["city_id"].astype(str) == city_id].tail(1)
+    row = per_city[city_id]
+    if row.empty:
+        raise KeyError(f"Unknown city: {city_id}")
+    r = row.iloc[0]
+    return {
+        "temp_c": float(r["temperature_2m_max"]),
+        "humidity_pct": float(r["relative_humidity_2m_mean"]),
+        "precip_mm": float(r["precipitation_sum"]),
+        "et0_mm": float(r["et0_fao_evapotranspiration"]),
+        "spei": float(r["SPEI_3"]),
+        "observed_at": pd.Timestamp(r["time"]).date().isoformat(),
+    }
+
 async def weather_inference_generator(city_id: str, interval: float = 3.0, max_steps: Optional[int] = None) -> AsyncGenerator[Dict[str, Any], None]:
     """
-    Generator streaming real-time OpenMeteo weather parameters, training/sync progress,
-    and model inference state over Server-Sent Events.
+    Generator streaming the latest real weather observations, ingestion status,
+    and TFT readiness state over Server-Sent Events.
     """
     step = 0
     while True:
         step += 1
+        latest = _latest_weather(city_id)
         payload = {
             "type": "weather_sync",
             "city_id": city_id,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "step": step,
             "weather": {
-                "temp_c": round(28.5 + (step % 5) * 0.2, 2),
-                "humidity_pct": round(75.0 - (step % 4) * 0.5, 2),
-                "precip_mm": round(max(0.0, 5.0 - (step % 3) * 1.5), 2),
-                "et0_mm": round(3.2 + (step % 3) * 0.1, 2)
+                "temp_c": latest["temp_c"],
+                "humidity_pct": latest["humidity_pct"],
+                "precip_mm": latest["precip_mm"],
+                "et0_mm": latest["et0_mm"],
+                "observed_at": latest["observed_at"],
             },
             "inference_state": {
-                "model_status": "ready" if app_state.is_ready else "evaluating",
-                "latest_spei_p50": round(-0.75 - (step * 0.01), 2),
-                "drought_risk": "Moderate Drought" if step > 2 else "Mild Drought"
+                "model_status": "ready" if app_state.is_ready else "unavailable",
+                "latest_spei_p50": latest["spei"],
+                "drought_risk": classify_spei(latest["spei"]),
             }
         }
         yield {
@@ -314,7 +396,7 @@ async def weather_inference_generator(city_id: str, interval: float = 3.0, max_s
 
 @app.get("/api/v1/stream/weather", tags=["Streaming"])
 async def stream_weather_events(
-    city_id: str = Query("surabaya"), 
+    city_id: str = Query("Bojonegoro"), 
     interval: float = Query(3.0, ge=0.1, le=10.0),
     max_steps: Optional[int] = Query(None, description="Optional cap on stream iterations for testing")
 ):

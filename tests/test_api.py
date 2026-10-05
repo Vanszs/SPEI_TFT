@@ -18,12 +18,13 @@ async def test_health_endpoint():
 @pytest.mark.asyncio
 async def test_predict_endpoint():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as ac:
-        payload = {"city_id": "surabaya", "forecast_days": 5}
+        payload = {"city_id": "Bojonegoro", "forecast_days": 5}
         res = await ac.post("/api/v1/predict", json=payload)
         assert res.status_code == 200
         data = res.json()
-        assert data["city_id"] == "surabaya"
+        assert data["city_id"] == "Bojonegoro"
         assert len(data["predictions"]["p50"]) == 5
+        assert len(data["dates"]) == 5
 
 @pytest.mark.asyncio
 async def test_spei_calculate_endpoint():
@@ -45,7 +46,7 @@ async def test_ingest_status_endpoint():
 @pytest.mark.asyncio
 async def test_stream_weather_sse():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as ac:
-        res = await ac.get("/api/v1/stream/weather?city_id=surabaya&interval=0.1&max_steps=1")
+        res = await ac.get("/api/v1/stream/weather?city_id=Bojonegoro&interval=0.1&max_steps=1")
         assert res.status_code == 200
         assert "text/event-stream" in res.headers.get("content-type", "")
         lines = res.text.splitlines()

@@ -1,7 +1,7 @@
 """
 End-to-end 8-variable production pipeline: ingest -> preprocess -> train -> eval -> test.
 
-Run:  python3 scripts/run_full_pipeline.py [--wait-on-quota] [--epochs 60] [--allow-cpu]
+Run:  python3 scripts/run_full_pipeline.py [--wait-on-quota] [--epochs 60]
 
 Idempotent/resumable: ingest resumes from already-fetched nodes. If the Open-Meteo
 DAILY quota is exhausted (HTTP 429 "try again tomorrow"), ingest cannot finish today.
@@ -103,7 +103,6 @@ def main():
                     help="seconds to wait between node fetches (gentler on API)")
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--encoder", type=int, default=90)
-    ap.add_argument("--allow-cpu", action="store_true")
     args = ap.parse_args()
 
     print("STEP 1/4: ingest (8-var, resume) ...")
