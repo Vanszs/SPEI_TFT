@@ -95,12 +95,14 @@ def build_city_nodes(city_id, center_lat, center_lon, node_offsets=None):
     return nodes
 
 
-def fetch_node_data(node_meta, max_retries=3):
+def fetch_node_data(node_meta, max_retries=3, start_date=None, end_date=None):
+    """Ambil data satu node. start_date/end_date opsional untuk refresh delta;
+    tanpa argumen memakai rentang penuh START_DATE..END_DATE."""
     params = {
         "latitude": node_meta["lat"],
         "longitude": node_meta["lon"],
-        "start_date": START_DATE,
-        "end_date": END_DATE,
+        "start_date": start_date or START_DATE,
+        "end_date": end_date or END_DATE,
         "daily": ",".join(REQUIRED_VARIABLES),
         "timezone": "Asia/Jakarta",
     }
@@ -213,6 +215,8 @@ def main(
     persist_partial=True,
     max_retries=6,
     request_delay=1.5,
+    end_date=None,
+    start_date=None,
 ):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     city_centers = load_city_centers(city_config_path)
@@ -245,10 +249,14 @@ def main(
 
     all_dfs = []
     for node_meta in all_nodes:
-        if node_meta["raw_node_id"] in fetched_nodes:
+        # Refresh delta: node yang sudah ada tetap diambil dari start_date
+        # eksplisit, karena datanya mungkin berakhir di tanggal lama.
+        if node_meta["raw_node_id"] in fetched_nodes and start_date is None:
             continue
         try:
-            df_node = fetch_node_data(node_meta, max_retries=max_retries)
+            df_node = fetch_node_data(
+                node_meta, max_retries=max_retries, start_date=start_date, end_date=end_date
+            )
             all_dfs.append(df_node)
             print(f"Fetched {len(df_node)} rows for {node_meta['raw_node_id']}")
             time.sleep(request_delay)

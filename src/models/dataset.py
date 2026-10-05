@@ -108,8 +108,10 @@ def create_dataset(
         "wind_speed_10m_mean": ArrayStandardScaler(),
     }
 
+    # Cutoff waktu adalah milik pemanggil (train.py memotong di 2022-12-31).
+    # Memotong lagi di sini membuang Desember 2022 dari training.
     training = TimeSeriesDataSet(
-        data[lambda x: x.time_idx < x.time_idx.max() - max_prediction_length],
+        data,
         time_idx="time_idx",
         target="SPEI_3",
         group_ids=[MODEL_GROUP_COL],

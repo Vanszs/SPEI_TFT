@@ -1,8 +1,9 @@
 """Event-based drought verification for SPEI forecasts.
 
 The moderate (SPEI <= -1.0) and severe (SPEI <= -1.5) thresholds mirror
-``src/data/spei.classify_spei``. Division by zero in any metric returns
-``0.0``. Rows with a non-finite actual or predicted value are excluded.
+``src/data/spei.classify_spei``. A metric with an undefined denominator returns
+``None`` (bukan ``0.0``) supaya "tidak ada sampel" tidak terbaca sebagai nilai nol
+yang terukur. Baris dengan actual/predicted non-finite dibuang.
 """
 
 from __future__ import annotations

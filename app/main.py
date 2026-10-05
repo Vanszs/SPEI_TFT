@@ -140,17 +140,61 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def _active_checkpoint_name(root: Path) -> str | None:
+    """Checkpoint yang benar-benar dipakai untuk inferensi."""
+    cfg = root / "logs/run_config.json"
+    if cfg.exists():
+        try:
+            return Path(json.loads(cfg.read_text(encoding="utf-8"))["best_model_path"]).name
+        except (json.JSONDecodeError, KeyError, OSError):
+            pass
+    return None
+
+
 def _study_paths() -> tuple[Path, Path]:
+    """Satu resolver untuk SELURUH app: pakai artefak evaluasi yang checkpoint-nya
+    sama dengan model inferensi, supaya tidak ada dua model dalam satu app.
+    ponytail: hanya artifacts dengan predictions_full.csv yang dipertimbangkan."""
     root = Path(__file__).resolve().parent.parent
-    return root / "data/processed/spei_dataset.parquet", root / "results/full_eval_20260602_063310/predictions_full.csv"
+    active = _active_checkpoint_name(root)
+    candidates = sorted((root / "results").glob("*/predictions_full.csv"), reverse=True)
+    for pred in candidates:
+        summary = pred.parent / "metrics_summary.json"
+        if not summary.exists():
+            continue
+        try:
+            ckpt = Path(json.loads(summary.read_text(encoding="utf-8"))["checkpoint"]).name
+        except (json.JSONDecodeError, KeyError, OSError):
+            continue
+        if active is None or ckpt == active:
+            return root / "data/processed/spei_dataset.parquet", pred
+    if candidates:
+        return root / "data/processed/spei_dataset.parquet", candidates[0]
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Artefak evaluasi belum tersedia.",
+    )
+
+# Kontrak respons API: 4 kelas (cocok dengan DroughtSeverity di frontend).
+# Diturunkan dari kelas kanonik src.data.spei.classify_spei agar ambang tidak bisa
+# drift: kalau ambang kanonik berubah, label API ikut. Kekeringan ringan dilipat ke
+# MODERATE (bukan NORMAL) supaya kekeringan dini tidak terbaca "Normal".
+_CANONICAL_TO_RISK = {
+    "Kekeringan Ekstrem": "EXTREME",
+    "Kekeringan Parah": "SEVERE",
+    "Kekeringan Sedang": "MODERATE",
+    "Kekeringan Ringan": "MODERATE",
+    "Normal": "NORMAL",
+    "Basah Ringan": "NORMAL",
+    "Basah Sedang": "NORMAL",
+    "Basah Parah": "NORMAL",
+    "Basah Ekstrem": "NORMAL",
+}
+
 
 def _spei_label(value: float) -> str:
-    # 4-class frontend contract (NORMAL|MODERATE|SEVERE|EXTREME).
-    # Boundaries mirror the canonical WMO classes in src.data.spei.classify_spei.
-    if value <= -2.0: return "EXTREME"
-    if value <= -1.5: return "SEVERE"
-    if value <= -1.0: return "MODERATE"
-    return "NORMAL"
+    """Label risiko 4 kelas untuk API (REST + SSE memakai fungsi yang sama)."""
+    return _CANONICAL_TO_RISK[classify_spei(value)]
 
 @app.get("/api/v1/study/regions", response_model=StudyResponse, tags=["Study"])
 async def study_regions():
@@ -220,6 +264,21 @@ async def study_regions():
             pd.Timestamp(r.time).date().isoformat(): float(r.pred_p50)
             for r in city_preds.itertuples()
         }
+        # Histori 6 bulan terakhir HARUS dari rentang yang punya prediksi, kalau tidak
+        # `predicted` selalu null (prediksi berakhir sebelum observasi terakhir).
+        actual_by_date = {
+            pd.Timestamp(r.time).date().isoformat(): float(r.SPEI_3)
+            for r in city_data.itertuples()
+        }
+        hist_window = city_preds.tail(6) if not city_preds.empty else city_data.tail(6)
+        hist_rows = []
+        for r in hist_window.itertuples():
+            key = pd.Timestamp(r.time).date().isoformat()
+            hist_rows.append({
+                "month": pd.Timestamp(r.time).strftime("%d %b %Y"),
+                "actual": actual_by_date.get(key),
+                "predicted": pred_by_date.get(key),
+            })
         latest = city_data.iloc[-1]
         latest_pred = city_preds.iloc[-1] if not city_preds.empty else None
         regions.append(StudyRegionResponse(
@@ -231,18 +290,11 @@ async def study_regions():
             severity=_spei_label(float(latest["SPEI_3"])),
             latest_observation=latest["time"].date().isoformat(),
             evaluation_prediction=(StudyQuantiles(p10=float(latest_pred["pred_p10"]), p50=float(latest_pred["pred_p50"]), p90=float(latest_pred["pred_p90"])) if latest_pred is not None else None),
-            historical_spei=[
-                {
-                    "month": row.time.strftime("%d %b %Y"),
-                    "actual": float(row.SPEI_3),
-                    "predicted": pred_by_date.get(row.time.date().isoformat()),
-                }
-                for row in city_data.tail(6).itertuples()
-            ],
+            historical_spei=hist_rows,
         ))
     return StudyResponse(
         data_status="DATA PENELITIAN · observasi dan evaluasi model",
-        source="data/processed/spei_dataset.parquet + results/full_eval_20260602_063310/predictions_full.csv",
+        source=f"data/processed/spei_dataset.parquet + {pred_path.relative_to(pred_path.parents[1])}",
         observation_period=[data["time"].min().date().isoformat(), data["time"].max().date().isoformat()],
         prediction_period=[preds["time"].min().date().isoformat(), preds["time"].max().date().isoformat()],
         regions=regions,
@@ -383,7 +435,7 @@ async def weather_inference_generator(city_id: str, interval: float = 3.0, max_s
             "inference_state": {
                 "model_status": "ready" if app_state.is_ready else "unavailable",
                 "latest_spei_p50": latest["spei"],
-                "drought_risk": classify_spei(latest["spei"]),
+                "drought_risk": _spei_label(latest["spei"]),
             }
         }
         yield {

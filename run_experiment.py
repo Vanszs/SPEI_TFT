@@ -38,27 +38,6 @@ def _banner(msg: str):
     print(f"\n{bar}\n  {msg}\n{bar}")
 
 
-def _run(cmd: list, label: str):
-    """Run a subprocess and stream stdout/stderr in real time."""
-    _banner(label)
-    start = time.time()
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, encoding="utf-8", errors="replace", cwd=str(ROOT)
-    )
-    lines = []
-    for line in proc.stdout:
-        print(line, end="", flush=True)
-        lines.append(line)
-    proc.wait()
-    elapsed = time.time() - start
-    status = "OK" if proc.returncode == 0 else "FAILED"
-    print(f"\n[{status}] {label} -> {elapsed:.0f}s")
-    if proc.returncode != 0:
-        raise RuntimeError(f"{label} exited with code {proc.returncode}")
-    return "".join(lines)
-
-
 def _best_checkpoint(enc: int) -> Path:
     """Return the best checkpoint matching enc{N}-*."""
     pattern = f"enc{enc}-*.ckpt"
@@ -387,8 +366,6 @@ def main():
         skill = (1.0 - m_rmse / n_rmse) * 100
         verdict = "BEATS naive" if skill > 0 else "DOES NOT beat naive"
         print(f"\n  Skill Score  : {skill:.1f}%  -- Model {verdict}")
-
-    print(f"\n  MD report    : {report}")
 
     print(f"\n  MD report    : {report}")
 

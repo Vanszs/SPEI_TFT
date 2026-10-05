@@ -369,7 +369,7 @@ try:
 
     # Quick forward pass on test data â€” use checkpoint's encoder length
     test_data_local = data[data.year >= 2024].copy()
-    train_data_local = data[data.year < 2024].copy()
+    train_data_local = data[data.year < 2023].copy()
     train_ds_eval = create_dataset(train_data_local,
                                    max_encoder_length=ckpt_encoder_len,
                                    max_prediction_length=ckpt_pred_len)

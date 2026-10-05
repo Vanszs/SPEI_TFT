@@ -13,6 +13,7 @@ import pandas as pd
 import torch
 from pytorch_forecasting import TimeSeriesDataSet
 
+from src.evaluation.calibration import apply_calibration, fit_per_city_interval_calibration
 from src.models.dataset import MODEL_GROUP_COL, create_dataset
 from src.models.tft import load_tft_checkpoint
 
@@ -88,6 +89,51 @@ class InferenceBundle:
         self.entity_ids = set(self.data[MODEL_GROUP_COL].astype(str))
         for e in self.entity_ids:
             self.cities.setdefault(e, e)
+        self.calibration_factors = self._fit_calibration()
+
+    def _fit_calibration(self) -> dict:
+        """Faktor kalibrasi per kota dari data validasi 2023 (jalur yang sama dengan
+        full_evaluation.apply_calibration). Tanpa ini interval web lebih sempit dari
+        yang dilaporkan PICP."""
+        val = self.data[pd.to_datetime(self.data["time"]).dt.year == 2023]
+        if val.empty:
+            return {}
+        rows = []
+        for city in sorted(val["city_id"].astype(str).unique()):
+            ent = self._entity_for(city)
+            loc = self.data[self.data[MODEL_GROUP_COL].astype(str) == ent].sort_values("time")
+            if len(loc) < self.pred_len + 10:
+                continue
+            loc_ds = TimeSeriesDataSet.from_dataset(
+                self.train_ds, loc, predict=False, stop_randomization=True
+            )
+            loader = loc_ds.to_dataloader(train=False, batch_size=64, num_workers=0)
+            raw = self.model.predict(
+                loader, mode="raw", return_x=True,
+                trainer_kwargs={"accelerator": "cpu", "devices": 1},
+            )
+            preds = raw.output.prediction.cpu().numpy()
+            t_idx = raw.x["decoder_time_idx"].cpu().numpy()
+            step0 = {}
+            for i in range(preds.shape[0]):
+                key = int(t_idx[i, 0])
+                if key not in step0:
+                    step0[key] = (
+                        float(preds[i, 0, self.qidx["p10"]]),
+                        float(preds[i, 0, self.qidx["p50"]]),
+                        float(preds[i, 0, self.qidx["p90"]]),
+                    )
+            for key, (p10, p50, p90) in step0.items():
+                rows.append({"city_id": city, "time_idx": key,
+                             "pred_p10": p10, "pred_p50": p50, "pred_p90": p90})
+        if not rows:
+            return {}
+        frame = pd.DataFrame(rows)
+        actual = val[["city_id", "time_idx", "SPEI_3"]].rename(columns={"SPEI_3": "actual"})
+        merged = pd.merge(actual, frame, on=["city_id", "time_idx"], how="inner")
+        if len(merged) <= 10:
+            return {}
+        return fit_per_city_interval_calibration(merged, city_col="city_id")
 
     def _entity_for(self, city_id: str) -> str:
         if city_id in self.cities:
@@ -161,6 +207,17 @@ class InferenceBundle:
         )
         preds = raw.output.prediction.cpu().numpy()[0]          # [horizon, n_quantiles]
         time_idx = raw.x["decoder_time_idx"].cpu().numpy()[0]   # [horizon]
+
+        # Kalibrasi per kota: samakan lebar interval dengan yang dilaporkan PICP.
+        factor = float(self.calibration_factors.get(city_id, self.calibration_factors.get(entity, 1.0)))
+        if factor != 1.0:
+            p10 = preds[:, self.qidx["p10"]]
+            p90 = preds[:, self.qidx["p90"]]
+            p50 = preds[:, self.qidx["p50"]]
+            half = (p90 - p10) / 2.0
+            preds = preds.copy()
+            preds[:, self.qidx["p10"]] = p50 - half * factor
+            preds[:, self.qidx["p90"]] = p50 + half * factor
 
         n = min(horizon, preds.shape[0])
         dates = [

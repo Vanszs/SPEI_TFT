@@ -53,10 +53,23 @@ def tft_metrics_and_events() -> tuple[dict, dict]:
     step0 = dict(summary.get("overall", {}))
     step0["metric"] = "step0 (t+1 only)"
 
-    events = {"note": "no TFT predictions to verify"}
+    # Dua cakupan HARUS dibedakan eksplisit: step-0 (n kecil, dari predictions_full.csv)
+    # vs all-horizon (n besar, dari metrics_summary.json). Sebelumnya JSON hanya memuat
+    # step-0 tanpa label sehingga bisa disalahartikan sebagai angka all-horizon.
+    events = {
+        "scope_note": (
+            "step0 = t+1 saja (prediksi baris pertama tiap window); "
+            "all_horizons = t+1..t+30 di-pool. Jangan bandingkan keduanya."
+        ),
+        "step0": {"note": "no TFT predictions to verify"},
+        "all_horizons": summary.get("event_detection", {"note": "not present in metrics_summary.json"}),
+    }
     if TFT_PRED_PATH.exists():
         df = pd.read_csv(TFT_PRED_PATH)
-        events = evaluate_events(df, actual_col="actual", pred_col="pred_p50", thresholds=(-1.0, -1.5))
+        step0_events = evaluate_events(df, actual_col="actual", pred_col="pred_p50", thresholds=(-1.0, -1.5))
+        step0_events["scope"] = "step0"
+        step0_events["n_samples"] = int(len(df))
+        events["step0"] = step0_events
     return {"all_horizons": all_h, "step0": step0}, events
 
 
@@ -85,10 +98,16 @@ def main():
         if name == "tft":
             m = m["all_horizons"]
         print(f"{name:11} RMSE={m.get('rmse')} MAE={m.get('mae')} R2={m.get('r2')} r={m.get('pearson_r')} n={m.get('n_samples')}")
-    print("\n=== §3.8.2 TFT event metrics ===")
-    for k, v in payload["tft_event_metrics"].items():
-        if isinstance(v, dict) and "pod" in v:
-            print(f"{k}: POD={v['pod']:.3f} FAR={v['far']:.3f} CSI={v['csi']:.3f} F1={v['f1']:.3f}")
+    print("\n=== §3.8.2 TFT event metrics (scope diberi label) ===")
+    ev = payload["tft_event_metrics"]
+    for k, v in ev.get("step0", {}).items():
+        if isinstance(v, dict) and v.get("pod") is not None:
+            print(f"step0        {k}: POD={v['pod']:.3f} FAR={v['far']:.3f} CSI={v['csi']:.3f} F1={v['f1']:.3f} n={v.get('n')}")
+    allh = ev.get("all_horizons", {})
+    for name, block in allh.items():
+        if isinstance(block, dict) and isinstance(block.get("overall_all_horizons"), dict):
+            v = block["overall_all_horizons"]
+            print(f"all_horizons {name}: POD={v['pod']:.3f} FAR={v['far']:.3f} CSI={v['csi']:.3f} F1={v['f1']}")
 
 
 if __name__ == "__main__":

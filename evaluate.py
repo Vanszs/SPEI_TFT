@@ -144,6 +144,18 @@ def evaluate_model(
     )
 
     test_data = data[data.year >= test_year_start].copy()
+
+    # B2/B3: prepend enc_len days of history so the earliest target dates have a full
+    # encoder window (mirrors train.py val_start_idx and full_evaluation._with_warmup).
+    # Without this the first ~enc_len days of each entity are dropped -> biased metrics.
+    def _with_warmup(slice_df, entity):
+        ent_all = data[data[entity_col].astype(str) == entity]
+        start_idx = slice_df["time_idx"].min() - ckpt_encoder_len
+        return ent_all[
+            (ent_all["time_idx"] >= start_idx)
+            & (ent_all["time_idx"] <= slice_df["time_idx"].max())
+        ].copy()
+
     print(f"\nTest Data Shape: {test_data.shape}")
     print(f"Test Period: {test_data['time'].min()} to {test_data['time'].max()}")
     pred_len = ckpt_pred_len
@@ -152,7 +164,7 @@ def evaluate_model(
         results = []
         for ent in sorted(test_data[entity_col].astype(str).unique()):
             print(f"Processing {ent}...")
-            loc_data = test_data[test_data[entity_col].astype(str) == ent].copy()
+            loc_data = _with_warmup(test_data[test_data[entity_col].astype(str) == ent], ent)
             loc_ds = TimeSeriesDataSet.from_dataset(
                 train_ds, loc_data, predict=False, stop_randomization=True
             )
@@ -235,7 +247,7 @@ def evaluate_model(
     }
     horizon_preds = {h: {} for h in range(pred_len)}
     for ent in sorted(test_data[entity_col].astype(str).unique()):
-        loc_data = test_data[test_data[entity_col].astype(str) == ent].copy()
+        loc_data = _with_warmup(test_data[test_data[entity_col].astype(str) == ent], ent)
         loc_ds = TimeSeriesDataSet.from_dataset(train_ds, loc_data, predict=False, stop_randomization=True)
         loader = loc_ds.to_dataloader(train=False, batch_size=64, num_workers=0)
         raw = model.predict(
