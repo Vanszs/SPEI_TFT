@@ -46,3 +46,9 @@ logs/lightning_logs/
 logs/checkpoints/
 logs/archive_*/
 results_archive_*/
+# Frontend build output & deps (handled by frontend/.gitignore too, kept here for safety)
+frontend/node_modules/
+frontend/dist/
+
+# Browser QA session artifacts (Playwright MCP)
+.playwright-mcp/
