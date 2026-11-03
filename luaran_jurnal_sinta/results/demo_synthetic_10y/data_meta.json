@@ -1,0 +1,55 @@
+{
+  "study": "Bromo Tengger Semeru",
+  "requested_lat": -7.9425,
+  "requested_lon": 112.953,
+  "grid_lat": -7.9,
+  "grid_lon": 112.9,
+  "timezone": "Asia/Jakarta",
+  "target": "t2m_min_c",
+  "target_definition": "minimum of 24 hourly 2m temperature samples in the local day",
+  "rows": 3652,
+  "date_start": "2016-01-02",
+  "date_end": "2025-12-31",
+  "split": {
+    "train": {
+      "start": "2016-01-02",
+      "end": "2022-12-31",
+      "rows": 2556
+    },
+    "val": {
+      "start": "2023-01-01",
+      "end": "2024-06-30",
+      "rows": 547
+    },
+    "test": {
+      "start": "2024-07-01",
+      "end": "2025-12-31",
+      "rows": 549
+    }
+  },
+  "target_stats": {
+    "min": 4.157952880859398,
+    "mean": 9.85195196346022,
+    "max": 16.427545166015648
+  },
+  "raw_files": 120,
+  "raw_months_expected": 120,
+  "hourly_rows": 87671,
+  "accumulation_handling": "tp/str de-accumulated hourly increments (00 UTC reset)",
+  "elevation_correction": "none; ERA5-Land grid-cell mean, not station elevation",
+  "dropped": {
+    "partial_days_dropped": 2,
+    "target_missing_dropped": 0,
+    "feature_gap_dropped": 0,
+    "imputed_values": {
+      "t2m_mean_c": 0,
+      "t2m_max_c": 0,
+      "d2m_c": 0,
+      "dewpoint_depression": 0,
+      "net_thermal_mj": 0,
+      "wind_speed": 0,
+      "tp_mm": 0
+    }
+  },
+  "source": "/tmp/tft_full/raw"
+}

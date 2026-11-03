@@ -1,0 +1,43 @@
+study:
+  name: "Bromo Tengger Semeru"
+  latitude: -7.9425
+  longitude: 112.9530
+  timezone: "Asia/Jakarta"
+  start_date: "2016-01-01"
+  end_date: "2025-12-31"
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  # Target yang diramal. t2m_min_c = suhu minimum harian (proxy embun upas).
+  target: "t2m_min_c"
+  # Interpolasi kovariat maksimal N hari; target tidak diinterpolasi.
+  max_gap_fill_days: 3
+  split:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+
+model:
+  max_encoder_length: 30
+  max_prediction_length: 7
+  hidden_size: 32
+  attention_head_size: 2
+  hidden_continuous_size: 8
+  dropout: 0.20
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip_val: 0.5
+  batch_size: 64
+  max_epochs: 80
+  patience: 10
+  lr_patience: 4
+  rnn_layers: 2
+  quantiles: [0.1, 0.5, 0.9]
+  seed: 42
+  precision: "bf16-mixed"
+  num_workers: 0
+
+paths:
+  logs: "logs"
+  results: "results"

@@ -1,0 +1,98 @@
+{
+  "model": "lstm",
+  "checkpoint": "/tmp/tft_full/logs/checkpoints/lstm-20261103_094937-epoch=44-val_loss=0.3150.ckpt",
+  "target": "t2m_min_c",
+  "quantiles": [],
+  "test_windows": 543,
+  "overall": {
+    "mae": 0.32462565528189247,
+    "rmse": 0.4159072480469998,
+    "bias": 0.030033584495347068,
+    "smape_pct": 3.4448532936873013,
+    "picp_80": NaN,
+    "mpiw": NaN,
+    "pinball": NaN,
+    "n": 3801,
+    "n_origins": 543
+  },
+  "per_horizon": [
+    {
+      "mae": 0.3216269101446733,
+      "rmse": 0.4119698798595114,
+      "bias": 0.027082459395299834,
+      "smape_pct": 3.4216165940373813,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 1
+    },
+    {
+      "mae": 0.32074622563455263,
+      "rmse": 0.411787076728646,
+      "bias": 0.027748188173331044,
+      "smape_pct": 3.4070830017479605,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 2
+    },
+    {
+      "mae": 0.32351831819032034,
+      "rmse": 0.4133833955604077,
+      "bias": 0.02973379693634963,
+      "smape_pct": 3.431979225048893,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 3
+    },
+    {
+      "mae": 0.32417632185512785,
+      "rmse": 0.4157541185649394,
+      "bias": 0.030823075661539908,
+      "smape_pct": 3.4431722852203306,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 4
+    },
+    {
+      "mae": 0.3253628405857266,
+      "rmse": 0.4179964815110782,
+      "bias": 0.031999017564389026,
+      "smape_pct": 3.4505823568278684,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 5
+    },
+    {
+      "mae": 0.32635893812934813,
+      "rmse": 0.4176324669327922,
+      "bias": 0.03162280973147653,
+      "smape_pct": 3.4587360591479146,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 6
+    },
+    {
+      "mae": 0.33059003243349827,
+      "rmse": 0.4227160270834821,
+      "bias": 0.031225744005043517,
+      "smape_pct": 3.5008035337807573,
+      "picp_80": NaN,
+      "mpiw": NaN,
+      "pinball": NaN,
+      "n": 543,
+      "horizon": 7
+    }
+  ],
+  "scope_note": "Metrics pool overlapping test windows. overall.n counts horizon observations, not independent days; overall.n_origins is the number of forecast origins."
+}
