@@ -1,0 +1,11 @@
+[Unit]
+Description=NusaPantau monthly data + forecast refresh (no retraining)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/media/DiskE/SKRIPSI/Skripsi_Nopal
+ExecStart=/home/vanszs/.pyenv/shims/python3 -m scripts.update_weekly
+StandardOutput=append:/media/DiskE/SKRIPSI/Skripsi_Nopal/logs/update-weekly.log
+StandardError=append:/media/DiskE/SKRIPSI/Skripsi_Nopal/logs/update-weekly.log

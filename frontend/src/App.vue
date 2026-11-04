@@ -4,9 +4,9 @@ import { Activity, BookOpen, Download, Droplets, FileText, Gauge, Menu, Search, 
 import Forecast30View from './components/Forecast30View.vue';
 import PredictionsView from './components/PredictionsView.vue';
 import ExportModal from './components/ExportModal.vue';
-import { DEFAULT_METRICS, fetchStudyData } from './api';
-import type { RegionPrediction } from './types';
-import { MOCK_REGIONS } from './data/mockData';
+import ReadingGuide from './components/ReadingGuide.vue';
+import { fetchStudyData } from './api';
+import type { Freshness, ModelMetrics, RegionPrediction } from './types';
 
 type ActiveView = 'forecast30' | 'predict' | 'method';
 
@@ -17,13 +17,20 @@ const views = [
 ];
 
 const activeView = ref<ActiveView>('forecast30');
-const regions = ref<RegionPrediction[]>(MOCK_REGIONS);
-const dataStatus = ref('DATA DUMMY · menunggu data penelitian');
+const regions = ref<RegionPrediction[]>([]);
+const model = ref<ModelMetrics | null>(null);
+const freshness = ref<Freshness>('current');
+const forecastStatus = ref<'active' | 'archived'>('active');
+const asOf = ref('');
+const dataAgeDays = ref<number | null>(null);
+const dataStatus = ref('Memuat data penelitian…');
 const dataError = ref<string | null>(null);
+const isLoading = ref(true);
 const searchQuery = ref('');
 const isExportOpen = ref(false);
 const mobileNavOpen = ref(false);
 const selectedRegionState = ref<RegionPrediction | null>(null);
+const focusCity = ref<string | null>(null);
 
 let abortController: AbortController | null = null;
 
@@ -32,14 +39,22 @@ onMounted(() => {
   fetchStudyData(abortController.signal)
     .then((study) => {
       regions.value = study.regions;
+      model.value = study.model;
+      freshness.value = study.freshness;
+      forecastStatus.value = study.forecastStatus;
+      asOf.value = study.asOf;
+      dataAgeDays.value = study.dataAgeDays;
       selectedRegionState.value = study.regions[0] ?? null;
       dataStatus.value = `${study.status} · observasi ${study.observationPeriod[0]}–${study.observationPeriod[1]}`;
     })
     .catch((error: unknown) => {
       if ((error as Error).name !== 'AbortError') {
         dataError.value = error instanceof Error ? error.message : 'Data penelitian gagal dimuat.';
-        dataStatus.value = 'Data belum tersedia';
+        dataStatus.value = 'Data penelitian tidak tersedia';
       }
+    })
+    .finally(() => {
+      isLoading.value = false;
     });
 });
 
@@ -53,13 +68,21 @@ const filteredRegions = computed(() => {
   );
 });
 
-const selectedRegion = computed(() => selectedRegionState.value ?? regions.value[0]);
+const selectedRegion = computed(() => selectedRegionState.value ?? regions.value[0] ?? null);
 
 const goToRegion = (region: RegionPrediction) => {
   selectedRegionState.value = region;
+  focusCity.value = region.id;
   activeView.value = 'forecast30';
   searchQuery.value = '';
 };
+
+const openExport = () => {
+  if (selectedRegion.value) isExportOpen.value = true;
+};
+
+const pct = (value: number | null) => (value === null ? '—' : `${(value * 100).toFixed(1)}%`);
+const num = (value: number | null, digits = 3) => (value === null ? '—' : value.toFixed(digits));
 </script>
 
 <template>
@@ -114,7 +137,7 @@ const goToRegion = (region: RegionPrediction) => {
             </li>
           </ul>
         </div>
-        <button class="icon-btn" type="button" @click="isExportOpen = true" aria-label="Unduh laporan">
+        <button class="icon-btn" type="button" :disabled="!selectedRegion" @click="openExport" aria-label="Unduh laporan">
           <Download :size="17" />
         </button>
       </div>
@@ -133,12 +156,21 @@ const goToRegion = (region: RegionPrediction) => {
     </header>
 
     <main id="main" class="main">
-      <Forecast30View v-if="activeView === 'forecast30' && !dataError" />
+      <Forecast30View v-if="activeView === 'forecast30'" :focus-city="focusCity" />
 
-      <div v-if="dataError" class="notice notice--error" role="alert">{{ dataError }}</div>
-      <div v-else-if="!regions.length" class="notice" role="status">{{ dataStatus }}</div>
+      <div v-if="dataError && activeView !== 'forecast30'" class="notice notice--error" role="alert">{{ dataError }}</div>
 
-      <PredictionsView v-if="activeView === 'predict' && !dataError" :regions="regions" :status="dataStatus" @open-forecast30="activeView = 'forecast30'" />
+      <PredictionsView
+        v-if="activeView === 'predict' && !dataError"
+        :regions="regions"
+        :status="dataStatus"
+        :model="model"
+        :freshness="freshness"
+        :forecast-status="forecastStatus"
+        :as-of="asOf"
+        :data-age-days="dataAgeDays"
+        :is-loading="isLoading"
+      />
 
       <section v-if="activeView === 'method'" class="method" aria-label="Metodologi">
         <header class="view-head">
@@ -146,34 +178,50 @@ const goToRegion = (region: RegionPrediction) => {
           <h1>Dari data cuaca ke indeks kekeringan.</h1>
           <p>Ringkasan alur penelitian, supaya angka pada kartu prediksi bisa dibaca dengan tepat.</p>
         </header>
+
+        <ReadingGuide />
+
         <ol class="method__steps">
           <li>
             <Droplets :size="20" />
             <div>
               <h2>Neraca air harian</h2>
-              <p>Curah hujan dikurangi evapotranspirasi referensi (P − ET0) dari Open-Meteo Archive.</p>
+              <p>Curah hujan dikurangi evapotranspirasi referensi (P − ET0) dari arsip Open-Meteo.</p>
             </div>
           </li>
           <li>
             <FileText :size="20" />
             <div>
               <h2>Pseudo-SPEI-3</h2>
-              <p>Defisit diakumulasi 90 hari, lalu dipetakan ke skor baku lewat distribusi log-logistic per bulan.</p>
+              <p>Defisit diakumulasi 90 hari, lalu dipetakan ke skor baku lewat distribusi log-logistik. Parameter antar-bulan diinterpolasi agar indeks tidak melompat di pergantian bulan.</p>
             </div>
           </li>
           <li>
             <Activity :size="20" />
             <div>
               <h2>Temporal Fusion Transformer</h2>
-              <p>Encoder 90 hari memproyeksikan kuantil P10, P50, dan P90 hingga 30 hari ke depan.</p>
+              <p>Encoder 90 hari memproyeksikan kuantil P10, P50, dan P90 30 hari setelah data terakhir.</p>
             </div>
           </li>
         </ol>
+
         <dl class="method__metrics">
-          <div><dt>Skill score</dt><dd>{{ (DEFAULT_METRICS.skillScore * 100).toFixed(1) }}%</dd></div>
-          <div><dt>RMSE</dt><dd>{{ DEFAULT_METRICS.rmse.toFixed(3) }}</dd></div>
-          <div><dt>MAE</dt><dd>{{ DEFAULT_METRICS.mae.toFixed(3) }}</dd></div>
+          <div><dt>Skill score (30 hari, semua horizon)</dt><dd>{{ pct(model?.skillScoreAllHorizons ?? null) }}</dd></div>
+          <div><dt>Skill score (t+1)</dt><dd>{{ pct(model?.skillScoreT1 ?? null) }}</dd></div>
+          <div><dt>RMSE t+1</dt><dd>{{ num(model?.rmse ?? null) }}</dd></div>
+          <div><dt>MAE t+1</dt><dd>{{ num(model?.mae ?? null) }}</dd></div>
+          <div><dt>Cakupan interval t+1</dt><dd>{{ pct(model?.picp ?? null) }}</dd></div>
+          <div><dt>Periode uji</dt><dd>{{ model?.testPeriod ?? '—' }}</dd></div>
         </dl>
+
+        <p v-if="model?.checkpoint" class="method__note">
+          Checkpoint aktif <code>{{ model.checkpoint }}</code>.
+          Cakupan interval di atas diukur pada evaluasi satu langkah ke depan; jalur 30 hari
+          memiliki ketidakpastian yang lebih lebar (lihat panel riwayat di halaman 30 Hari).
+          Skill score membandingkan model dengan tebakan sederhana &ldquo;nilai kemarin sama dengan hari ini&rdquo;:
+          positif berarti lebih baik, negatif berarti lebih buruk pada horizon tersebut.
+        </p>
+        <p v-else class="method__note">Metrik model belum tersedia dari server.</p>
       </section>
 
       <footer class="footer">
@@ -183,10 +231,12 @@ const goToRegion = (region: RegionPrediction) => {
     </main>
 
     <ExportModal
+      v-if="isExportOpen && selectedRegion"
       :is-open="isExportOpen"
       @close="isExportOpen = false"
       :regions="regions"
       :selected-region="selectedRegion"
+      :metrics="model"
     />
   </div>
 </template>

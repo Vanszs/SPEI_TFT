@@ -7,7 +7,8 @@ import asyncio
 import json
 import os
 import time
-from datetime import datetime
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -79,6 +80,12 @@ class StudyRegionResponse(BaseModel):
     historical_spei: List[Dict[str, Any]]
 
 class StudyResponse(BaseModel):
+    schema_version: int
+    as_of: str
+    data_age_days: int
+    freshness: str
+    forecast_status: str
+    model: Dict[str, Any]
     data_status: str
     source: str
     observation_period: List[str]
@@ -93,14 +100,21 @@ class AppState:
     is_ready: bool = False
     bundle: Any = None
     load_error: Optional[str] = None
+    load_error_at: float = 0.0
 
 app_state = AppState()
+WIB = ZoneInfo("Asia/Jakarta")
+
+
+def _today() -> date:
+    """Satu zona waktu untuk semua perhitungan umur data (server bisa UTC)."""
+    return datetime.now(WIB).date()
 
 def ensure_bundle():
     """Lazily build the TFT inference bundle once (checkpoint load is slow)."""
     if app_state.bundle is not None:
         return app_state.bundle
-    if app_state.load_error is not None:
+    if app_state.load_error is not None and (time.time() - app_state.load_error_at) < 60:
         return None
     try:
         from src.evaluation.inference import build_bundle
@@ -112,6 +126,7 @@ def ensure_bundle():
     except Exception as exc:
         app_state.bundle = None
         app_state.load_error = str(exc)
+        app_state.load_error_at = time.time()
         app_state.is_ready = False
     return app_state.bundle
 
@@ -151,13 +166,26 @@ def _active_checkpoint_name(root: Path) -> str | None:
     return None
 
 
+def _load_artifact() -> dict:
+    """Artefak prakiraan 30 hari; sumber yang sama dengan halaman 30 Hari."""
+    path = Path(__file__).resolve().parent.parent / "frontend/public/forecast_30d.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def _study_paths() -> tuple[Path, Path]:
     """Satu resolver untuk SELURUH app: pakai artefak evaluasi yang checkpoint-nya
     sama dengan model inferensi, supaya tidak ada dua model dalam satu app.
     ponytail: hanya artifacts dengan predictions_full.csv yang dipertimbangkan."""
     root = Path(__file__).resolve().parent.parent
     active = _active_checkpoint_name(root)
-    candidates = sorted((root / "results").glob("*/predictions_full.csv"), reverse=True)
+    candidates = sorted(
+        (root / "results").glob("*/predictions_full.csv"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     for pred in candidates:
         summary = pred.parent / "metrics_summary.json"
         if not summary.exists():
@@ -168,6 +196,12 @@ def _study_paths() -> tuple[Path, Path]:
             continue
         if active is None or ckpt == active:
             return root / "data/processed/spei_dataset.parquet", pred
+    # Jangan menyajikan metrik milik checkpoint lain: lebih baik 503 eksplisit.
+    if active is not None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Artefak evaluasi untuk checkpoint aktif ({active}) belum tersedia.",
+        )
     if candidates:
         return root / "data/processed/spei_dataset.parquet", candidates[0]
     raise HTTPException(
@@ -200,11 +234,16 @@ def _spei_label(value: float) -> str:
 async def study_regions():
     """Expose verified thesis artifacts; no fabricated future forecast."""
     data_path, pred_path = _study_paths()
+    artifact = _load_artifact()
     raw_path = data_path.parent.parent / "raw/weather_history_east_java.parquet"
     if not data_path.exists() or not pred_path.exists():
         raise HTTPException(status_code=503, detail="Artefak data penelitian belum tersedia.")
     data = pd.read_parquet(data_path, columns=["city_id", "time", "SPEI_3", "lat", "lon"])
     data["time"] = pd.to_datetime(data["time"])
+    artifact_as_of = artifact.get("last_observed")
+    if artifact_as_of:
+        # Siklus bulanan: tampilkan hanya data sampai cutoff anchor.
+        data = data[data["time"] <= pd.Timestamp(artifact_as_of)]
     preds = pd.read_csv(pred_path, usecols=["city_id", "time", "pred_p10", "pred_p50", "pred_p90"])
     preds["time"] = pd.to_datetime(preds["time"])
     grid = []
@@ -280,7 +319,22 @@ async def study_regions():
                 "predicted": pred_by_date.get(key),
             })
         latest = city_data.iloc[-1]
-        latest_pred = city_preds.iloc[-1] if not city_preds.empty else None
+        # "Besok" harus dari prakiraan yang sedang disajikan, bukan baris terakhir
+        # evaluasi (yang berhenti 29 hari sebelum data terakhir).
+        artifact_city = (artifact.get("cities") or {}).get(city) or {}
+        artifact_forecast = artifact_city.get("forecast") or {}
+        if artifact_forecast.get("p50"):
+            next_day = StudyQuantiles(
+                p10=float(artifact_forecast["p10"][0]),
+                p50=float(artifact_forecast["p50"][0]),
+                p90=float(artifact_forecast["p90"][0]),
+            )
+        else:
+            latest_pred = city_preds.iloc[-1] if not city_preds.empty else None
+            next_day = (
+                StudyQuantiles(p10=float(latest_pred["pred_p10"]), p50=float(latest_pred["pred_p50"]), p90=float(latest_pred["pred_p90"]))
+                if latest_pred is not None else None
+            )
         regions.append(StudyRegionResponse(
             id=city,
             regency_name=f"Kab. {city}",
@@ -289,10 +343,44 @@ async def study_regions():
             spei_current=float(latest["SPEI_3"]),
             severity=_spei_label(float(latest["SPEI_3"])),
             latest_observation=latest["time"].date().isoformat(),
-            evaluation_prediction=(StudyQuantiles(p10=float(latest_pred["pred_p10"]), p50=float(latest_pred["pred_p50"]), p90=float(latest_pred["pred_p90"])) if latest_pred is not None else None),
+            evaluation_prediction=next_day,
             historical_spei=hist_rows,
         ))
+    as_of = data["time"].max().date()
+    today = _today()
+    data_age_days = (today - as_of).days
+    # Status siklus: artefak dianggap terkini bila anchor-nya sama dengan
+    # "tanggal 1 bulan lalu". Umur data (35 hari) memang disengaja.
+    ref_year = today.year - (1 if today.month == 1 else 0)
+    ref_month = 12 if today.month == 1 else today.month - 1
+    expected_anchor = date(ref_year, ref_month, 1).isoformat()
+    cycle_current = artifact.get("anchor") == expected_anchor
+    freshness = "current" if cycle_current else "stale"
+    forecast_status = "active" if cycle_current else "archived"
+    metrics = {}
+    summary_path = pred_path.parent / "metrics_summary.json"
+    if summary_path.exists():
+        try:
+            metrics = json.loads(summary_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    overall = metrics.get("overall") or {}
     return StudyResponse(
+        schema_version=3,
+        as_of=as_of.isoformat(),
+        data_age_days=data_age_days,
+        freshness=freshness,
+        forecast_status=forecast_status,
+        model={
+            "checkpoint": Path(metrics["checkpoint"]).name if metrics.get("checkpoint") else None,
+            "skill_score_t1": metrics.get("skill_score"),
+            "skill_score_all_horizons": metrics.get("skill_score_all_horizons"),
+            "picp": (metrics.get("calibration") or {}).get("picp_after_overall", metrics.get("picp_overall")),
+            "rmse": overall.get("rmse"),
+            "mae": overall.get("mae"),
+            "n": overall.get("n"),
+            "test_period": metrics.get("test_period"),
+        },
         data_status="DATA PENELITIAN · observasi dan evaluasi model",
         source=f"data/processed/spei_dataset.parquet + {pred_path.relative_to(pred_path.parents[1])}",
         observation_period=[data["time"].min().date().isoformat(), data["time"].max().date().isoformat()],
@@ -304,11 +392,41 @@ async def study_regions():
 
 # --- REST Endpoints ---
 
+_HEALTH_STATS: dict = {"at": 0.0, "value": None}
+
+
 @app.get("/health", tags=["Health"])
 async def health_check():
+    # Health check bisa dipanggil tiap beberapa detik oleh monitoring; jangan
+    # membaca parquet + CSV penuh setiap request. Cache 60 detik.
+    now = time.time()
+    if _HEALTH_STATS["value"] is None or (now - _HEALTH_STATS["at"]) > 60:
+        details = {"data_age_days": None, "artifact_age_days": None, "freshness": None}
+        try:
+            data_path, pred_path = _study_paths()
+            age = None
+            artifact_as_of = _load_artifact().get("last_observed")
+            if artifact_as_of:
+                age = (_today() - date.fromisoformat(artifact_as_of)).days
+            elif data_path.exists():
+                observed = pd.read_parquet(data_path, columns=["time"])["time"]
+                age = (_today() - pd.to_datetime(observed).max().date()).days
+            if age is not None:
+                details["data_age_days"] = age
+                if pred_path.exists():
+                    ref_year = _today().year - (1 if _today().month == 1 else 0)
+                    ref_month = 12 if _today().month == 1 else _today().month - 1
+                    expected = date(ref_year, ref_month, 1).isoformat()
+                    details["freshness"] = "current" if _load_artifact().get("anchor") == expected else "stale"
+                    details["artifact_age_days"] = (_today() - datetime.fromtimestamp(pred_path.stat().st_mtime, WIB).date()).days
+        except (HTTPException, OSError, ValueError, KeyError):
+            pass
+        _HEALTH_STATS["value"] = details
+        _HEALTH_STATS["at"] = now
     return {
         "status": "healthy" if app_state.is_ready else "degraded",
-        "model_loaded": app_state.is_ready
+        "model_loaded": app_state.is_ready,
+        **_HEALTH_STATS["value"],
     }
 
 @app.post("/api/v1/predict", response_model=PredictResponse, tags=["Prediction"])
@@ -322,8 +440,12 @@ async def predict_spei(payload: PredictRequest):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Model not available: {app_state.load_error or 'not loaded'}",
         )
+    cutoff = _load_artifact().get("last_observed")
     try:
-        out = bundle.forecast(payload.city_id, payload.forecast_days)
+        if cutoff:
+            out = bundle.forecast_as_of(payload.city_id, cutoff, payload.forecast_days)
+        else:
+            out = bundle.forecast(payload.city_id, payload.forecast_days)
     except KeyError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
@@ -373,7 +495,7 @@ async def ingest_status():
     if raw_path.exists():
         raw = pd.read_parquet(raw_path, columns=["raw_node_id"])
         nodes = int(raw["raw_node_id"].nunique())
-    last_sync = datetime.utcfromtimestamp(proc_path.stat().st_mtime).isoformat() + "Z"
+    last_sync = datetime.fromtimestamp(proc_path.stat().st_mtime, timezone.utc).isoformat()
     return IngestionStatusResponse(status="synced", last_sync=last_sync, nodes_synced=nodes)
 
 
@@ -390,15 +512,19 @@ def _latest_weather(city_id: str) -> dict:
             detail="Artefak data penelitian belum tersedia.",
         )
     per_city = globals().setdefault("_WEATHER_CACHE", {})
-    if city_id not in per_city:
+    cache_key = (city_id, proc_path.stat().st_mtime)
+    if cache_key not in per_city:
         cols = [
             "city_id", "time", "SPEI_3", "temperature_2m_max",
             "relative_humidity_2m_mean", "precipitation_sum",
             "et0_fao_evapotranspiration",
         ]
         df = pd.read_parquet(proc_path, columns=cols).sort_values("time")
-        per_city[city_id] = df[df["city_id"].astype(str) == city_id].tail(1)
-    row = per_city[city_id]
+        cutoff = _load_artifact().get("last_observed")
+        if cutoff:
+            df = df[df["time"] <= pd.Timestamp(cutoff)]
+        per_city[cache_key] = df[df["city_id"].astype(str) == city_id].tail(1)
+    row = per_city[cache_key]
     if row.empty:
         raise KeyError(f"Unknown city: {city_id}")
     r = row.iloc[0]

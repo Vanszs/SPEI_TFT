@@ -134,7 +134,7 @@ function step(delta: number) {
         class="chart__svg"
         tabindex="0"
         role="img"
-        aria-label="Prediksi SPEI 30 hari ke depan. Gunakan tombol panah kiri dan kanan untuk membaca nilai harian."
+        aria-label="Prakiraan SPEI 30 hari. Gunakan tombol panah kiri dan kanan untuk membaca nilai harian."
         @mousemove="pickFromEvent"
         @mouseleave="hover = null"
         @focus="hover = hover ?? 0"

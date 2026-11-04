@@ -27,9 +27,16 @@ const worstDay = computed(() => worst.value.indexOf(Math.min(...worst.value)));
 const endClass = computed(() => classOf(lateMean.value));
 const worstClass = computed(() => classOf(Math.min(...worst.value)));
 
-const severeDays = computed(() => p50.value.filter((v) => v <= props.bounds.severe).length);
+// Hitung dari kelas kanonik, bukan ambang terpisah, supaya chip dan angka
+// tidak pernah berbeda pendapat (mis. SPEI -0,6 = Waspada).
+const severeDays = computed(
+  () => p50.value.filter((v) => {
+    const c = classify(v, props.bounds);
+    return c === 'SEVERE' || c === 'EXTREME';
+  }).length,
+);
 const moderateDays = computed(
-  () => p50.value.filter((v) => v > props.bounds.severe && v <= props.bounds.moderate).length,
+  () => p50.value.filter((v) => classify(v, props.bounds) === 'MODERATE').length,
 );
 
 const trendLabel = computed(() => {

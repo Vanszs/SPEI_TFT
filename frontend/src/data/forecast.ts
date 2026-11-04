@@ -10,19 +10,55 @@ interface ForecastSeries {
   p90: number[];
 }
 
+export interface HistoryWindow {
+  as_of: string;
+  dates: string[];
+  p10: number[];
+  p50: number[];
+  p90: number[];
+  actual: (number | null)[];
+}
+
 export interface CityForecast {
   entity: string;
   observed: ObservedSeries;
   forecast: ForecastSeries;
+  history?: HistoryWindow[];
 }
 
 export interface ForecastData {
   checkpoint: string;
+  anchor?: string;
+  cutoff?: string;
   last_observed: string;
   observed_days: number;
   forecast_days: number;
-  severity_thresholds: { moderate: number; severe: number; extreme: number };
+  history_windows?: number;
+  history_days?: number;
+  severity_thresholds: { moderate: number; severe: number; extreme: number; light?: number };
   cities: Record<string, CityForecast>;
+}
+
+export interface HistoryMetrics {
+  mae: number | null;
+  rmse: number | null;
+  coverage: number | null;
+}
+
+/** Metrics use only days with a realised observation; coverage is the share inside P10–P90. */
+export function historyMetrics(window: HistoryWindow): HistoryMetrics {
+  const values = window.actual.flatMap((actual, i) =>
+    actual === null || !Number.isFinite(actual) || !Number.isFinite(window.p50[i])
+      ? []
+      : [{ actual, p50: window.p50[i], inside: actual >= window.p10[i] && actual <= window.p90[i] }],
+  );
+  if (!values.length) return { mae: null, rmse: null, coverage: null };
+  const errors = values.map(({ actual, p50 }) => Math.abs(actual - p50));
+  return {
+    mae: errors.reduce((sum, error) => sum + error, 0) / errors.length,
+    rmse: Math.sqrt(errors.reduce((sum, error) => sum + error ** 2, 0) / errors.length),
+    coverage: (values.filter(({ inside }) => inside).length / values.length) * 100,
+  };
 }
 
 export interface DayPoint {
@@ -56,6 +92,8 @@ export function classify(spei: number, t: ForecastData['severity_thresholds']): 
   if (spei <= t.extreme) return 'EXTREME';
   if (spei <= t.severe) return 'SEVERE';
   if (spei <= t.moderate) return 'MODERATE';
+  // Kekeringan ringan (< -0.5) dilipat ke MODERATE, sama seperti API.
+  if (t.light !== undefined && spei < t.light) return 'MODERATE';
   return 'NORMAL';
 }
 

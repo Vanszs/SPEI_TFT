@@ -205,7 +205,9 @@ def preprocess_pipeline(
     selected_nodes["top_k"] = int(top_k)
     selected_nodes["schema_version"] = SCHEMA_VERSION
     selected_nodes = selected_nodes.sort_values(["city_id", "selected_rank", "raw_node_id"]).reset_index(drop=True)
-    selected_nodes.to_parquet(selection_artifact_path, index=False)
+    tmp_selection = f"{selection_artifact_path}.tmp"
+    selected_nodes.to_parquet(tmp_selection, index=False)
+    os.replace(tmp_selection, selection_artifact_path)
     print(f"Saved node selection artifact to {selection_artifact_path}")
 
     # Repro metadata with input fingerprint.
@@ -309,7 +311,9 @@ def preprocess_pipeline(
     print(f"Data Cleaned. Rows: {len(df_processed)} -> {len(df_clean)}")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df_clean.to_parquet(output_path, index=False)
+    tmp_output = f"{output_path}.tmp"
+    df_clean.to_parquet(tmp_output, index=False)
+    os.replace(tmp_output, output_path)
     print(f"Processed data saved to {output_path}. Shape: {df_clean.shape}")
     print(
         "Super-nodes:",

@@ -81,7 +81,11 @@ class InferenceBundle:
         self.model.to("cpu")
         self.qidx = _quantile_index_map(self.model)
         self.pred_len = int(getattr(self.model.hparams, "max_prediction_length", 30))
-        self.train_ds = create_dataset(self.data)
+        # Normalizer/encoder HARUS di-fit pada train slice (tahun < 2023), sama
+        # seperti full_evaluation. Memakai seluruh data membuat prediksi web
+        # tidak sama dengan prediksi yang diukur RMSE/PICP-nya.
+        train_slice = self.data[pd.to_datetime(self.data["time"]).dt.year < 2023]
+        self.train_ds = create_dataset(train_slice)
         self.cities = {
             str(c): str(e)
             for c, e in self.data.groupby("city_id")[MODEL_GROUP_COL].first().items()
@@ -191,9 +195,22 @@ class InferenceBundle:
         Appends genuine future rows so the returned dates fall strictly after the
         last observation, then reads the model's quantile outputs for that horizon.
         """
+        horizon = min(int(forecast_days), self.pred_len)
         entity = self._entity_for(city_id)
         loc = self.data[self.data[MODEL_GROUP_COL].astype(str) == entity].sort_values("time")
+        return self._forecast_from(loc, city_id, entity, horizon)
+
+    def forecast_as_of(self, city_id: str, as_of, forecast_days: int = 30) -> dict:
+        """Forecast from rows available on or before `as_of`."""
+        entity = self._entity_for(city_id)
+        loc = self.data[self.data[MODEL_GROUP_COL].astype(str) == entity].sort_values("time")
+        loc = loc[loc["time"] <= pd.Timestamp(as_of)]
+        if loc.empty:
+            raise ValueError(f"No observations for {city_id} on or before {as_of}.")
         horizon = min(int(forecast_days), self.pred_len)
+        return self._forecast_from(loc, city_id, entity, horizon)
+
+    def _forecast_from(self, loc: pd.DataFrame, city_id: str, entity: str, horizon: int) -> dict:
         future_loc = self._append_future_rows(loc, horizon)
         pred_ds = TimeSeriesDataSet.from_dataset(
             self.train_ds, future_loc, predict=True, stop_randomization=True

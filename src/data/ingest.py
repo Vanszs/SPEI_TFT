@@ -2,6 +2,7 @@ import os
 import time
 import json
 import hashlib
+from datetime import date, timedelta
 from math import asin, cos, radians, sin, sqrt
 
 import pandas as pd
@@ -26,7 +27,7 @@ DEFAULT_NODE_OFFSETS = [
 ]
 
 START_DATE = "2005-01-01"
-END_DATE = "2026-01-01"  # exclusive end -> includes data up to 2025-12-31
+END_DATE = os.getenv("DROUGHT_END_DATE") or (date.today() - timedelta(days=7)).isoformat()  # exclusive end
 BASE_URL = "https://archive-api.open-meteo.com/v1/archive"
 
 REQUIRED_VARIABLES = [
@@ -334,16 +335,22 @@ def main(
             f"missing_cities={missing_cities}, insufficient_nodes={insufficient_nodes}"
         )
 
-    full_df.to_parquet(output_path, index=False)
-    print(f"\nSaved raw dataset (schema v{SCHEMA_VERSION}) to {output_path}")
-
-    if strict_coverage and not coverage_ok:
-        if not persist_partial and os.path.exists(output_path):
-            os.remove(output_path)
+    if strict_coverage and not coverage_ok and not persist_partial:
         raise ValueError(
             "Raw dataset coverage validation failed: "
             f"missing_cities={missing_cities}, insufficient_nodes={insufficient_nodes}. "
             f"Each configured city must have >= {min_nodes_per_city} nodes."
+        )
+
+    tmp_path = f"{output_path}.tmp"
+    full_df.to_parquet(tmp_path, index=False)
+    os.replace(tmp_path, output_path)
+    print(f"\nSaved raw dataset (schema v{SCHEMA_VERSION}) to {output_path}")
+
+    if strict_coverage and not coverage_ok:
+        raise ValueError(
+            "Raw dataset coverage validation failed (partial data tersimpan): "
+            f"missing_cities={missing_cities}, insufficient_nodes={insufficient_nodes}."
         )
 
 

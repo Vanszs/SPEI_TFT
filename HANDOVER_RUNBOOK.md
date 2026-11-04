@@ -7,8 +7,8 @@ Comprehensive guide for deploying, maintaining, and handing over the Drought Mon
 ## 1. System Architecture & Prerequisites
 
 ### Architecture Overview
-* **Frontend:** React + Vite (Port `3000` / Static build served via Nginx)
-* **Backend:** FastAPI + Uvicorn (Port `8000`)
+* **Frontend:** Vue 3 + Vite (Port `3005` / Static build served via Nginx)
+* **Backend:** FastAPI + Uvicorn (Port `8005`)
 * **Reverse Proxy & SSL:** Nginx with Let's Encrypt TLS
 * **Process Manager:** PM2 or Systemd
 
@@ -47,7 +47,7 @@ SECRET_KEY=generate_a_secure_random_secret_key_here
 
 # Server & Network Configuration
 HOST=127.0.0.1
-PORT=8000
+PORT=8005
 ALLOWED_ORIGINS=https://drought-monitor.local,https://yourdomain.com
 
 # Database / Storage (if applicable)
@@ -78,7 +78,7 @@ module.exports = {
     {
       name: "drought-backend",
       script: "venv/bin/uvicorn",
-      args: "main:app --host 127.0.0.1 --port 8000 --workers 4",
+      args: "main:app --host 127.0.0.1 --port 8005 --workers 2",
       cwd: "/var/www/drought-monitor/backend",
       interpreter: "none",
       env: {
@@ -117,7 +117,7 @@ After=network.target
 User=www-data
 Group=www-data
 WorkingDirectory=/var/www/drought-monitor/backend
-ExecStart=/var/www/drought-monitor/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 4
+ExecStart=/var/www/drought-monitor/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8005 --workers 2
 Restart=always
 RestartSec=5
 EnvironmentFile=/var/www/drought-monitor/.env.production
@@ -137,7 +137,7 @@ sudo systemctl status drought-backend
 
 ---
 
-## 5. Frontend Deployment (React / Vite)
+## 5. Frontend Deployment (Vue / Vite)
 
 ```bash
 cd /var/www/drought-monitor/frontend
@@ -190,7 +190,7 @@ sudo certbot --nginx -d yourdomain.com
 
 ```bash
 # Verify API response
-curl -I http://127.0.0.1:8000/health
+curl -I http://127.0.0.1:8005/health
 
 # Verify Nginx proxy endpoint
 curl -I https://yourdomain.com/api/health

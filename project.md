@@ -6,7 +6,7 @@
 
 Proyek ini merupakan **sistem peramalan (forecasting) dan pemantauan kekeringan spasial-temporal** di seluruh wilayah Kabupaten/Kota Indonesia. Proyek riset skripsi ini mengintegrasikan pemodelan iklim hidrometeorologi berbasis indikator **SPEI (Standardized Precipitation Evapotranspiration Index)** dengan arsitektur deep learning **Temporal Fusion Transformer (TFT)**.
 
-Sistem ini mengambil data parameter cuaca historis dan perkiraan dari **OpenMeteo SDK**, melakukan kalkulasi neraca air tanah (presipitasi dikurangi evapotranspirasi potensial), dan memprediksi tingkat kekeringan hingga 12 bulan ke depan beserta rentang ketidakpastian kuantilnya ($q_{0.10}, q_{0.50}, q_{0.90}$).
+Sistem ini mengambil data parameter cuaca historis dan perkiraan dari **OpenMeteo SDK**, melakukan kalkulasi neraca air tanah (presipitasi dikurangi evapotranspirasi potensial), dan memprediksi tingkat kekeringan 30 hari ke depan (siklus bulanan, lag 1 bulan) beserta rentang ketidakpastian kuantilnya ($q_{0.10}, q_{0.50}, q_{0.90}$).
 
 ### A. Detail 5 Kota/Kabupaten Asli Studi (`city_id`) & Resolusi Spasial Grid
 1. **Daftar 5 Wilayah Studi Asli (Jawa Timur)**:
@@ -27,7 +27,7 @@ Sistem ini mengambil data parameter cuaca historis dan perkiraan dari **OpenMete
 
 ## 🎯 2. Tujuan Proyek (Project Goals & Purpose)
 
-1. **Akurasi & Pemodelan Multi-Horizon**: Menghasilkan estimasi indeks kekeringan SPEI dengan tingkat presisi tinggi pada horizon 1, 3, 6, hingga 12 bulan menggunakan keunggulan arsitektur Transformer untuk time-series.
+1. **Akurasi & Pemodelan Multi-Horizon**: Menghasilkan estimasi indeks kekeringan SPEI pada horizon 30 hari, dievaluasi pada t+1 dan seluruh horizon menggunakan keunggulan arsitektur Transformer untuk time-series.
 2. **Estimasi Ketidakpastian Kuantil (Quantile Uncertainty)**: Mengkuantifikasi risiko skenario terburuk ($q_{0.10}$), median ($q_{0.50}$), dan terbasah ($q_{0.90}$) sehingga pengambil kebijakan tidak hanya mengandalkan satu nilai tunggal.
 3. **Penyampaian Informasi Ramah Publik**: Menyajikan hasil riset ilmiah yang rumit ke dalam antarmuka web publik yang mudah dipahami oleh masyarakat umum, petani, media, dan pemerintah daerah, tanpa terlihat seperti dashboard admin internal yang kaku.
 4. **Keandalan & Standar Produksi (Robustness)**: Mengimplementasikan pipeline yang terverifikasi multi-seed, bebas dari flaw arsitektur via *Sonar Audit*, serta siap di-deploy secara publik menggunakan FastAPI, PM2, dan Nginx.
@@ -55,15 +55,15 @@ Sistem ini dibangun dengan arsitektur modular yang terbagi menjadi 6 layer utama
 - `train.py`: Training loop PyTorch Lightning dengan *Pinball/Quantile Loss Minimization* dan *Learning Rate Finder*.
 
 ### C. Evaluation & Quality Assurance Layer (`src/evaluation/` & `sonar_audit/`)
-- `metrics.py` & `calibration.py`: Perhitungan Quantile Loss, RMSE, MAE, Skill Score (86.5%), serta kurva kalibrasi.
+- `metrics.py` & `calibration.py`: Perhitungan Quantile Loss, RMSE, MAE, Skill Score, dan PICP; nilainya dibaca dari artifacts evaluasi checkpoint aktif.
 - `run_audit.py` & `test_pipeline.py`: Audit kualitas kode static Sonar dan pengujian integrasi end-to-end.
 
 ### D. Backend API Service (`app/`)
 - **FastAPI Async Engine** (`app/main.py` & `app/api/v1/endpoints/predict.py`): Menyediakan REST API endpoint untuk kalkulasi SPEI, inferensi model TFT, serta Server-Sent Events (SSE) / WebSocket untuk streaming status real-time.
 
 ### E. Frontend Application (`frontend/`)
-- **Vite 6 + React 19 + TypeScript + Tailwind v4**: Aplikasi Single Page Application (SPA) publik yang cepat dan responsif.
-- **Leaflet & Recharts**: Peta interaktif GeoJSON spasial dan grafik proyeksi kuantil *Fan-Chart*.
+- **Vite 6 + Vue 3 + TypeScript + Tailwind v4**: Aplikasi Single Page Application (SPA) publik yang cepat dan responsif.
+- **SVG kustom**: grafik fan-chart P10/P50/P90 tanpa library chart; peta belum diimplementasikan.
 
 ### F. Operations & Deployment Infrastructure
 - **PM2 Ecosystem Manager** (`ecosystem.config.js`): Mengelola eksekusi paralel FastAPI backend (port 8005) dan Vite frontend (port 3005) dengan proteksi memory auto-restart.
@@ -120,7 +120,7 @@ Setiap pengembang/AI lain yang akan melanjutkan pengembangan atau merancang ulan
 2. **Hero Section & Search Bar**:
    - Spanduk Peringatan Nasional (misal: *Waspada Kemarau*).
    - **Search Input Universal**: Pengguna dapat mencari nama Kabupaten/Kota mereka secara langsung (`Bojonegoro`, `Lamongan`, `Nganjuk`, `Ngawi`, `Tuban`).
-   - Chip Pencarian Populer & 4 Rangkuman Metrik (Wilayah Terpantau, Skill Score 86.5%, Status Nasional, Sync Real-time).
+   - Pencarian kabupaten, badge kesegaran data, dan ringkasan metrik dari API.
 
 3. **Peta Spasial Grid Interaktif (`DroughtMap`)**:
    - Map Basemap Dark Vector Tile (`CartoDB Dark Matter`).
@@ -128,7 +128,7 @@ Setiap pengembang/AI lain yang akan melanjutkan pengembangan atau merancang ulan
    - Tooltip hover & interaksi klik titik lokasi untuk memperbarui detail wilayah terpilih.
 
 4. **Visualisasi Fan-Chart Kuantil SPEI (`TFTFanChart`)**:
-   - Grafik area bertumpuk Recharts yang menampilkan tren 6 bulan historis dan pita ketidakpastian prediksi (+1M s/d +12M).
+   - Grafik SVG berisi prakiraan 30 hari dengan pita P10–P90 dan riwayat 3 jendela.
    - Penjelasan Skenario Kuantil:
      - $q_{0.10}$: **Skenario Paling Kering** (Batas Terburuk)
      - $q_{0.50}$: **Proyeksi Utama** (Estimasi Median)

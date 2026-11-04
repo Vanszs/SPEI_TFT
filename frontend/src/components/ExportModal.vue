@@ -8,8 +8,7 @@ interface ExportModalProps {
   isOpen: boolean;
   regions: RegionPrediction[];
   selectedRegion: RegionPrediction;
-  metrics?: ModelMetrics;
-  chartElementId?: string;
+  metrics?: ModelMetrics | null;
 }
 
 const props = defineProps<ExportModalProps>();
@@ -26,7 +25,7 @@ const handleClose = () => {
 const handleExportPDF = async () => {
   isExportingPDF.value = true;
   try {
-    await generatePDFReport(props.selectedRegion, props.metrics, props.chartElementId);
+    await generatePDFReport(props.selectedRegion, props.metrics);
   } finally {
     isExportingPDF.value = false;
   }
@@ -84,7 +83,7 @@ const iconClass = 'w-5 h-5';
               <FileText :class="`${iconClass} text-[var(--amber)]`" />
               <div>
                 <div :class="titleClass">PDF Executive Report (.pdf)</div>
-                <div :class="copyClass">Print-ready report for {{ selectedRegion.regencyName }} with embedded chart</div>
+                <div :class="copyClass">Print-ready report for {{ selectedRegion.regencyName }} with model metrics</div>
               </div>
             </div>
             <span v-if="isExportingPDF" class="text-[10px] font-mono text-[var(--amber)] animate-pulse">Generating...</span>

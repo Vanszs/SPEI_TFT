@@ -5,7 +5,6 @@ import type { DroughtSeverity, RegionPrediction } from '../types';
 const props = withDefaults(
   defineProps<{
     region: RegionPrediction;
-    horizon: number;
     featured?: boolean;
   }>(),
   { featured: false },
@@ -64,7 +63,7 @@ const sign = (v: number | null) => (v === null || v === 0 ? '' : v > 0 ? '+' : '
         <span class="pred-read__value pred-read__value--muted">{{ fmt(current) }}</span>
       </div>
       <div class="pred-read pred-read--lead">
-        <span class="pred-read__label">+{{ horizon }} bulan</span>
+        <span class="pred-read__label">Prakiraan (P50)</span>
         <span class="pred-read__value">{{ fmt(median) }}</span>
       </div>
       <div class="pred-read">
