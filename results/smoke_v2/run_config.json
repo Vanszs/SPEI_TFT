@@ -1,0 +1,22 @@
+{
+  "schema_version_expected": 2,
+  "seed": 42,
+  "data_path": "results/smoke_v2/processed_schema_v2.parquet",
+  "max_epochs": 1,
+  "batch_size": 64,
+  "precision": "bf16-mixed",
+  "accumulate_grad_batches": 1,
+  "max_encoder_length": 90,
+  "learning_rate": 0.0003,
+  "weight_decay": 0.0001,
+  "gradient_clip_val": 0.5,
+  "accelerator": "gpu",
+  "suppress_library_warnings": true,
+  "strict_determinism": false,
+  "run_id": "20260531_184902",
+  "n_cities": 8,
+  "n_entities": 8,
+  "train_rows": 5120,
+  "val_rows": 3640,
+  "best_model_path": "/media/DiskE/SKRIPSI/Skripsi_Nopal/logs/checkpoints/enc90-run20260531_184902-epoch=0-val_loss=0.5023.ckpt"
+}

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Final Grid Leaflet Map</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Segoe UI, system-ui, sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    .leaflet-control-attribution {
+      font-size: 10px;
+    }
+    .map-title {
+      position: absolute;
+      top: 10px;
+      left: 50px;
+      z-index: 1000;
+      background: rgba(2, 6, 23, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+  <div class="map-title">
+    Final Grid Selection (Square-Only)<br/>
+    Cell size: 13.3 km
+  </div>
+  <div id="map"></div>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    const payload = {"cell_size_km": 13.3, "map_center": [-7.249800000000001, 111.9166], "rows": [{"city_id": "Bojonegoro", "raw_node_id": "Bojonegoro__n00__01605e42", "selected_rank": 1, "center": [-7.155, 111.88], "bounds": [[-7.214737693136903, 111.81979346847554], [-7.095262306863098, 111.94020653152445]], "color": "#1f77b4"}, {"city_id": "Bojonegoro", "raw_node_id": "Bojonegoro__n08__8d2113a1", "selected_rank": 2, "center": [-7.235, 111.8], "bounds": [[-7.294737693136903, 111.73978285521625], [-7.175262306863098, 111.86021714478375]], "color": "#1f77b4"}, {"city_id": "Bojonegoro", "raw_node_id": "Bojonegoro__n04__85de3168", "selected_rank": 3, "center": [-7.155, 111.75999999999999], "bounds": [[-7.214737693136903, 111.69979346847553], [-7.095262306863098, 111.82020653152445]], "color": "#1f77b4"}, {"city_id": "Bojonegoro", "raw_node_id": "Bojonegoro__n07__c3aca384", "selected_rank": 4, "center": [-7.235, 111.96], "bounds": [[-7.294737693136903, 111.89978285521624], [-7.175262306863098, 112.02021714478374]], "color": "#1f77b4"}, {"city_id": "Bojonegoro", "raw_node_id": "Bojonegoro__n06__f5dbc2f3", "selected_rank": 5, "center": [-7.075, 111.8], "bounds": [[-7.134737693136903, 111.73980396065974], [-7.0152623068630975, 111.86019603934025]], "color": "#1f77b4"}, {"city_id": "Lamongan", "raw_node_id": "Lamongan__n00__d875a9d1", "selected_rank": 1, "center": [-7.128, 112.316], "bounds": [[-7.187737693136903, 112.2557970231183], [-7.068262306863097, 112.3762029768817]], "color": "#ff7f0e"}, {"city_id": "Lamongan", "raw_node_id": "Lamongan__n04__27a82281", "selected_rank": 2, "center": [-7.128, 112.196], "bounds": [[-7.187737693136903, 112.1357970231183], [-7.068262306863097, 112.2562029768817]], "color": "#ff7f0e"}, {"city_id": "Lamongan", "raw_node_id": "Lamongan__n07__b75b519c", "selected_rank": 3, "center": [-7.208, 112.396], "bounds": [[-7.267737693136903, 112.33578645073358], [-7.1482623068630975, 112.45621354926642]], "color": "#ff7f0e"}, {"city_id": "Lamongan", "raw_node_id": "Lamongan__n03__cbc8ebed", "selected_rank": 4, "center": [-7.128, 112.436], "bounds": [[-7.187737693136903, 112.37579702311831], [-7.068262306863097, 112.4962029768817]], "color": "#ff7f0e"}, {"city_id": "Lamongan", "raw_node_id": "Lamongan__n02__ab4324c9", "selected_rank": 5, "center": [-7.248, 112.316], "bounds": [[-7.307737693136903, 112.25578111911854], [-7.1882623068630975, 112.37621888088147]], "color": "#ff7f0e"}, {"city_id": "Nganjuk", "raw_node_id": "Nganjuk__n00__6fee8772", "selected_rank": 1, "center": [-7.604, 111.905], "bounds": [[-7.663737693136903, 111.84473233134234], [-7.544262306863097, 111.96526766865766]], "color": "#2ca02c"}, {"city_id": "Nganjuk", "raw_node_id": "Nganjuk__n05__55f458c5", "selected_rank": 2, "center": [-7.524, 111.985], "bounds": [[-7.583737693136903, 111.92474350444469], [-7.464262306863097, 112.04525649555531]], "color": "#2ca02c"}, {"city_id": "Nganjuk", "raw_node_id": "Nganjuk__n01__6d3cd772", "selected_rank": 3, "center": [-7.484, 111.905], "bounds": [[-7.543737693136903, 111.84474904539954], [-7.424262306863097, 111.96525095460046]], "color": "#2ca02c"}, {"city_id": "Nganjuk", "raw_node_id": "Nganjuk__n03__ae29fe63", "selected_rank": 4, "center": [-7.604, 112.025], "bounds": [[-7.663737693136903, 111.96473233134235], [-7.544262306863097, 112.08526766865766]], "color": "#2ca02c"}, {"city_id": "Nganjuk", "raw_node_id": "Nganjuk__n02__26c98089", "selected_rank": 5, "center": [-7.724, 111.905], "bounds": [[-7.783737693136903, 111.844715343498], [-7.6642623068630975, 111.965284656502]], "color": "#2ca02c"}, {"city_id": "Ngawi", "raw_node_id": "Ngawi__n00__dbb171e5", "selected_rank": 1, "center": [-7.403, 111.445], "bounds": [[-7.462737693136902, 111.38476017280178], [-7.343262306863097, 111.50523982719821]], "color": "#d62728"}, {"city_id": "Ngawi", "raw_node_id": "Ngawi__n02__eeda0935", "selected_rank": 2, "center": [-7.523, 111.445], "bounds": [[-7.582737693136902, 111.38474364333892], [-7.463262306863097, 111.50525635666106]], "color": "#d62728"}, {"city_id": "Ngawi", "raw_node_id": "Ngawi__n07__16c0e66d", "selected_rank": 3, "center": [-7.483, 111.52499999999999], "bounds": [[-7.542737693136902, 111.46474918353411], [-7.423262306863097, 111.58525081646587]], "color": "#d62728"}, {"city_id": "Ngawi", "raw_node_id": "Ngawi__n05__499f4ce5", "selected_rank": 4, "center": [-7.3229999999999995, 111.52499999999999], "bounds": [[-7.382737693136902, 111.46477104066342], [-7.263262306863097, 111.58522895933656]], "color": "#d62728"}, {"city_id": "Ngawi", "raw_node_id": "Ngawi__n06__26e623bc", "selected_rank": 5, "center": [-7.3229999999999995, 111.365], "bounds": [[-7.382737693136902, 111.30477104066343], [-7.263262306863097, 111.42522895933656]], "color": "#d62728"}, {"city_id": "Tuban", "raw_node_id": "Tuban__n00__579ac5ea", "selected_rank": 1, "center": [-6.895, 112.045], "bounds": [[-6.954737693136902, 111.98482712593105], [-6.835262306863097, 112.10517287406896]], "color": "#9467bd"}, {"city_id": "Tuban", "raw_node_id": "Tuban__n08__106cc2d2", "selected_rank": 2, "center": [-6.975, 111.965], "bounds": [[-7.034737693136902, 111.90481690578676], [-6.915262306863097, 112.02518309421325]], "color": "#9467bd"}, {"city_id": "Tuban", "raw_node_id": "Tuban__n02__c3d6b041", "selected_rank": 3, "center": [-7.015, 112.045], "bounds": [[-7.074737693136902, 111.98481175040509], [-6.955262306863097, 112.10518824959492]], "color": "#9467bd"}, {"city_id": "Tuban", "raw_node_id": "Tuban__n04__14187886", "selected_rank": 4, "center": [-6.895, 111.925], "bounds": [[-6.954737693136902, 111.86482712593104], [-6.835262306863097, 111.98517287406895]], "color": "#9467bd"}, {"city_id": "Tuban", "raw_node_id": "Tuban__n01__dfcaa214", "selected_rank": 5, "center": [-6.7749999999999995, 112.045], "bounds": [[-6.834737693136902, 111.98484222978941], [-6.715262306863097, 112.1051577702106]], "color": "#9467bd"}]};
+
+    const map = L.map('map', {
+      zoomControl: true,
+      preferCanvas: true
+    }).setView(payload.map_center, 9);
+
+    // Visual style close to modern web-map look.
+    const esriImagery = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution: 'Tiles &copy; Esri'
+      }
+    );
+
+    const cartoLight = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }
+    );
+
+    const osmStd = L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {
+        attribution: '&copy; OpenStreetMap contributors'
+      }
+    );
+
+    esriImagery.addTo(map);
+
+    // Data layer: square grids only (no markers, no polylines).
+    const squares = [];
+    payload.rows.forEach((r) => {
+      const rect = L.rectangle(r.bounds, {
+        color: r.color,
+        weight: 2,
+        fillColor: r.color,
+        fillOpacity: 0.18,
+        lineCap: 'square',
+        lineJoin: 'miter'
+      });
+      rect.bindTooltip(
+        `${r.city_id} | rank=${r.selected_rank} | ${r.raw_node_id}`,
+        {sticky: true}
+      );
+      rect.addTo(map);
+      squares.push(rect);
+    });
+
+    const fg = L.featureGroup(squares);
+    map.fitBounds(fg.getBounds().pad(0.18));
+
+    L.control.layers(
+      {
+        'Esri Imagery': esriImagery,
+        'Carto Light': cartoLight,
+        'OpenStreetMap': osmStd
+      },
+      {},
+      {collapsed: false}
+    ).addTo(map);
+  </script>
+</body>
+</html>

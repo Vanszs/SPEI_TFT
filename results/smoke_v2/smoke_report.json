@@ -1,0 +1,17 @@
+{
+  "seed": 42,
+  "raw_rows": 87648,
+  "processed_rows": 13888,
+  "entities": 8,
+  "cities": 8,
+  "checks": {
+    "raw_node_id_time_unique": true,
+    "processed_group_time_unique": true,
+    "selected_node_count_eq_5": true,
+    "entity_count_gt_5": true,
+    "dataset_sequence_count_gt_0": true,
+    "selection_metadata_exists": true
+  },
+  "all_pass": true,
+  "checkpoint": null
+}

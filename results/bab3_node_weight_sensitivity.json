@@ -1,0 +1,272 @@
+{
+  "S1": {
+    "weights": {
+      "behavior": 0.5,
+      "distance": 0.5
+    },
+    "per_city_top5": {
+      "Bojonegoro": [
+        "Bojonegoro__n00__01605e42",
+        "Bojonegoro__n08__8d2113a1",
+        "Bojonegoro__n04__85de3168",
+        "Bojonegoro__n07__c3aca384",
+        "Bojonegoro__n06__f5dbc2f3"
+      ],
+      "Lamongan": [
+        "Lamongan__n00__d875a9d1",
+        "Lamongan__n04__27a82281",
+        "Lamongan__n07__b75b519c",
+        "Lamongan__n03__cbc8ebed",
+        "Lamongan__n02__ab4324c9"
+      ],
+      "Nganjuk": [
+        "Nganjuk__n00__6fee8772",
+        "Nganjuk__n05__55f458c5",
+        "Nganjuk__n03__ae29fe63",
+        "Nganjuk__n01__6d3cd772",
+        "Nganjuk__n02__26c98089"
+      ],
+      "Ngawi": [
+        "Ngawi__n00__dbb171e5",
+        "Ngawi__n07__16c0e66d",
+        "Ngawi__n02__eeda0935",
+        "Ngawi__n05__499f4ce5",
+        "Ngawi__n06__26e623bc"
+      ],
+      "Tuban": [
+        "Tuban__n00__579ac5ea",
+        "Tuban__n08__106cc2d2",
+        "Tuban__n02__c3d6b041",
+        "Tuban__n04__14187886",
+        "Tuban__n07__877e14a4"
+      ]
+    },
+    "stability_vs_ref": {
+      "per_city": {
+        "Bojonegoro": 5,
+        "Lamongan": 5,
+        "Nganjuk": 5,
+        "Ngawi": 5,
+        "Tuban": 4
+      },
+      "total": 24
+    },
+    "mean_representativeness": 0.9640556611357939
+  },
+  "S2": {
+    "weights": {
+      "behavior": 0.6,
+      "distance": 0.4
+    },
+    "per_city_top5": {
+      "Bojonegoro": [
+        "Bojonegoro__n00__01605e42",
+        "Bojonegoro__n08__8d2113a1",
+        "Bojonegoro__n04__85de3168",
+        "Bojonegoro__n07__c3aca384",
+        "Bojonegoro__n06__f5dbc2f3"
+      ],
+      "Lamongan": [
+        "Lamongan__n00__d875a9d1",
+        "Lamongan__n04__27a82281",
+        "Lamongan__n07__b75b519c",
+        "Lamongan__n03__cbc8ebed",
+        "Lamongan__n02__ab4324c9"
+      ],
+      "Nganjuk": [
+        "Nganjuk__n00__6fee8772",
+        "Nganjuk__n05__55f458c5",
+        "Nganjuk__n01__6d3cd772",
+        "Nganjuk__n03__ae29fe63",
+        "Nganjuk__n02__26c98089"
+      ],
+      "Ngawi": [
+        "Ngawi__n00__dbb171e5",
+        "Ngawi__n07__16c0e66d",
+        "Ngawi__n02__eeda0935",
+        "Ngawi__n05__499f4ce5",
+        "Ngawi__n06__26e623bc"
+      ],
+      "Tuban": [
+        "Tuban__n00__579ac5ea",
+        "Tuban__n08__106cc2d2",
+        "Tuban__n02__c3d6b041",
+        "Tuban__n04__14187886",
+        "Tuban__n07__877e14a4"
+      ]
+    },
+    "stability_vs_ref": {
+      "per_city": {
+        "Bojonegoro": 5,
+        "Lamongan": 5,
+        "Nganjuk": 5,
+        "Ngawi": 5,
+        "Tuban": 4
+      },
+      "total": 24
+    },
+    "mean_representativeness": 0.9640556611357939
+  },
+  "S3": {
+    "weights": {
+      "behavior": 0.7,
+      "distance": 0.3
+    },
+    "per_city_top5": {
+      "Bojonegoro": [
+        "Bojonegoro__n00__01605e42",
+        "Bojonegoro__n08__8d2113a1",
+        "Bojonegoro__n04__85de3168",
+        "Bojonegoro__n07__c3aca384",
+        "Bojonegoro__n06__f5dbc2f3"
+      ],
+      "Lamongan": [
+        "Lamongan__n00__d875a9d1",
+        "Lamongan__n04__27a82281",
+        "Lamongan__n07__b75b519c",
+        "Lamongan__n03__cbc8ebed",
+        "Lamongan__n02__ab4324c9"
+      ],
+      "Nganjuk": [
+        "Nganjuk__n00__6fee8772",
+        "Nganjuk__n05__55f458c5",
+        "Nganjuk__n01__6d3cd772",
+        "Nganjuk__n03__ae29fe63",
+        "Nganjuk__n02__26c98089"
+      ],
+      "Ngawi": [
+        "Ngawi__n00__dbb171e5",
+        "Ngawi__n02__eeda0935",
+        "Ngawi__n07__16c0e66d",
+        "Ngawi__n05__499f4ce5",
+        "Ngawi__n06__26e623bc"
+      ],
+      "Tuban": [
+        "Tuban__n00__579ac5ea",
+        "Tuban__n08__106cc2d2",
+        "Tuban__n02__c3d6b041",
+        "Tuban__n04__14187886",
+        "Tuban__n01__dfcaa214"
+      ]
+    },
+    "stability_vs_ref": {
+      "per_city": {
+        "Bojonegoro": 5,
+        "Lamongan": 5,
+        "Nganjuk": 5,
+        "Ngawi": 5,
+        "Tuban": 5
+      },
+      "total": 25
+    },
+    "mean_representativeness": 0.973286506248978
+  },
+  "S4": {
+    "weights": {
+      "behavior": 0.8,
+      "distance": 0.2
+    },
+    "per_city_top5": {
+      "Bojonegoro": [
+        "Bojonegoro__n00__01605e42",
+        "Bojonegoro__n04__85de3168",
+        "Bojonegoro__n08__8d2113a1",
+        "Bojonegoro__n07__c3aca384",
+        "Bojonegoro__n06__f5dbc2f3"
+      ],
+      "Lamongan": [
+        "Lamongan__n00__d875a9d1",
+        "Lamongan__n04__27a82281",
+        "Lamongan__n07__b75b519c",
+        "Lamongan__n03__cbc8ebed",
+        "Lamongan__n02__ab4324c9"
+      ],
+      "Nganjuk": [
+        "Nganjuk__n00__6fee8772",
+        "Nganjuk__n05__55f458c5",
+        "Nganjuk__n01__6d3cd772",
+        "Nganjuk__n03__ae29fe63",
+        "Nganjuk__n02__26c98089"
+      ],
+      "Ngawi": [
+        "Ngawi__n00__dbb171e5",
+        "Ngawi__n02__eeda0935",
+        "Ngawi__n07__16c0e66d",
+        "Ngawi__n05__499f4ce5",
+        "Ngawi__n06__26e623bc"
+      ],
+      "Tuban": [
+        "Tuban__n00__579ac5ea",
+        "Tuban__n02__c3d6b041",
+        "Tuban__n08__106cc2d2",
+        "Tuban__n04__14187886",
+        "Tuban__n01__dfcaa214"
+      ]
+    },
+    "stability_vs_ref": {
+      "per_city": {
+        "Bojonegoro": 5,
+        "Lamongan": 5,
+        "Nganjuk": 5,
+        "Ngawi": 5,
+        "Tuban": 5
+      },
+      "total": 25
+    },
+    "mean_representativeness": 0.973286506248978
+  },
+  "S5": {
+    "weights": {
+      "behavior": 1.0,
+      "distance": 0.0
+    },
+    "per_city_top5": {
+      "Bojonegoro": [
+        "Bojonegoro__n04__85de3168",
+        "Bojonegoro__n08__8d2113a1",
+        "Bojonegoro__n00__01605e42",
+        "Bojonegoro__n07__c3aca384",
+        "Bojonegoro__n06__f5dbc2f3"
+      ],
+      "Lamongan": [
+        "Lamongan__n00__d875a9d1",
+        "Lamongan__n04__27a82281",
+        "Lamongan__n07__b75b519c",
+        "Lamongan__n03__cbc8ebed",
+        "Lamongan__n02__ab4324c9"
+      ],
+      "Nganjuk": [
+        "Nganjuk__n00__6fee8772",
+        "Nganjuk__n05__55f458c5",
+        "Nganjuk__n01__6d3cd772",
+        "Nganjuk__n03__ae29fe63",
+        "Nganjuk__n02__26c98089"
+      ],
+      "Ngawi": [
+        "Ngawi__n00__dbb171e5",
+        "Ngawi__n02__eeda0935",
+        "Ngawi__n07__16c0e66d",
+        "Ngawi__n05__499f4ce5",
+        "Ngawi__n06__26e623bc"
+      ],
+      "Tuban": [
+        "Tuban__n00__579ac5ea",
+        "Tuban__n02__c3d6b041",
+        "Tuban__n08__106cc2d2",
+        "Tuban__n04__14187886",
+        "Tuban__n01__dfcaa214"
+      ]
+    },
+    "stability_vs_ref": {
+      "per_city": {
+        "Bojonegoro": 5,
+        "Lamongan": 5,
+        "Nganjuk": 5,
+        "Ngawi": 5,
+        "Tuban": 5
+      },
+      "total": 25
+    },
+    "mean_representativeness": 0.973286506248978
+  }
+}

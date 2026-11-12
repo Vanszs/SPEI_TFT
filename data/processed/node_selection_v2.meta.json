@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "selection_end_date": "2022-12-31",
+  "top_k": 5,
+  "seed": 42,
+  "selection_method": "hybrid_leave_one_out",
+  "sort_tie_breakers": [
+    "hybrid_score desc",
+    "behavior_score desc",
+    "distance_score desc",
+    "raw_node_id asc"
+  ],
+  "raw_fingerprint_sha256": "f87c299f3e20bb51f745edbf1e20c6d0041684c8cfebb82a711ba44b6651215b",
+  "selected_nodes_fingerprint_sha256": "88c7f65b4fbbbbf0b6b5864484dbba9d771893204d903ce648f803522dbcafb1"
+}

@@ -1,0 +1,25 @@
+========================================================================
+  TFT SPEI-3 FORECASTING - COMPREHENSIVE EVALUATION
+  Generated : 2026-06-02 05:13:47
+========================================================================
+Rows      : 37,905
+Period    : 2005-04-01 -> 2026-01-01
+Entity key: super_node_id
+Entities  : 5
+Cities    : 5
+Checkpoint: /media/DiskE/SKRIPSI/Skripsi_Nopal/logs/checkpoints/enc90-run20260602_030625-epoch=20-val_loss=0.1867.ckpt
+enc_len=90 pred_len=30
+Processing SN_Bojonegoro ...
+Processing SN_Lamongan ...
+Processing SN_Nganjuk ...
+Processing SN_Ngawi ...
+Processing SN_Tuban ...
+Merged rows: 3,515
+Saved core CSV/JSON artifacts.
+
+SUMMARY:
+Overall RMSE=0.2768 | Naive RMSE=0.1731
+Overall PICP=0.7986
+Horizon beats naive: 28/30
+Skill (t+1 only): -60.0%
+Skill (all 30 horizons, headline): +33.6%

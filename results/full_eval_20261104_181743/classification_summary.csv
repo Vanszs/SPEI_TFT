@@ -1,0 +1,6 @@
+city_id,exact_acc,broad_acc,total
+Bojonegoro,0.8714,0.9402,1003
+Lamongan,0.8375,0.9412,1003
+Nganjuk,0.8465,0.9143,1003
+Ngawi,0.8724,0.9292,1003
+Tuban,0.8265,0.9402,1003

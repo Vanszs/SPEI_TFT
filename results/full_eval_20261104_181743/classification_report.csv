@@ -1,0 +1,46 @@
+entity,city_id,class,actual_count,pred_count,correct,precision,recall,f1
+SN_Bojonegoro,Bojonegoro,Kekeringan Ekstrem,7,0,0,0.0,0.0,0.0
+SN_Bojonegoro,Bojonegoro,Kekeringan Parah,34,19,13,0.6842,0.3824,0.4906
+SN_Bojonegoro,Bojonegoro,Kekeringan Sedang,14,35,11,0.3143,0.7857,0.449
+SN_Bojonegoro,Bojonegoro,Kekeringan Ringan,150,116,105,0.9052,0.7,0.7895
+SN_Bojonegoro,Bojonegoro,Normal,360,404,352,0.8713,0.9778,0.9215
+SN_Bojonegoro,Bojonegoro,Basah Ringan,239,214,209,0.9766,0.8745,0.9227
+SN_Bojonegoro,Bojonegoro,Basah Sedang,158,184,153,0.8315,0.9684,0.8947
+SN_Bojonegoro,Bojonegoro,Basah Parah,41,31,31,1.0,0.7561,0.8611
+SN_Bojonegoro,Bojonegoro,Basah Ekstrem,0,0,0,0.0,0.0,0.0
+SN_Lamongan,Lamongan,Kekeringan Ekstrem,0,0,0,0.0,0.0,0.0
+SN_Lamongan,Lamongan,Kekeringan Parah,0,0,0,0.0,0.0,0.0
+SN_Lamongan,Lamongan,Kekeringan Sedang,0,0,0,0.0,0.0,0.0
+SN_Lamongan,Lamongan,Kekeringan Ringan,82,60,57,0.95,0.6951,0.8028
+SN_Lamongan,Lamongan,Normal,296,293,265,0.9044,0.8953,0.8998
+SN_Lamongan,Lamongan,Basah Ringan,253,224,189,0.8438,0.747,0.7925
+SN_Lamongan,Lamongan,Basah Sedang,269,303,240,0.7921,0.8922,0.8392
+SN_Lamongan,Lamongan,Basah Parah,69,99,66,0.6667,0.9565,0.7857
+SN_Lamongan,Lamongan,Basah Ekstrem,34,24,23,0.9583,0.6765,0.7931
+SN_Nganjuk,Nganjuk,Kekeringan Ekstrem,28,16,16,1.0,0.5714,0.7273
+SN_Nganjuk,Nganjuk,Kekeringan Parah,17,19,7,0.3684,0.4118,0.3889
+SN_Nganjuk,Nganjuk,Kekeringan Sedang,63,44,34,0.7727,0.5397,0.6355
+SN_Nganjuk,Nganjuk,Kekeringan Ringan,180,200,157,0.785,0.8722,0.8263
+SN_Nganjuk,Nganjuk,Normal,366,338,309,0.9142,0.8443,0.8778
+SN_Nganjuk,Nganjuk,Basah Ringan,202,243,190,0.7819,0.9406,0.8539
+SN_Nganjuk,Nganjuk,Basah Sedang,147,143,136,0.951,0.9252,0.9379
+SN_Nganjuk,Nganjuk,Basah Parah,0,0,0,0.0,0.0,0.0
+SN_Nganjuk,Nganjuk,Basah Ekstrem,0,0,0,0.0,0.0,0.0
+SN_Ngawi,Ngawi,Kekeringan Ekstrem,34,30,30,1.0,0.8824,0.9375
+SN_Ngawi,Ngawi,Kekeringan Parah,10,14,9,0.6429,0.9,0.75
+SN_Ngawi,Ngawi,Kekeringan Sedang,38,21,18,0.8571,0.4737,0.6102
+SN_Ngawi,Ngawi,Kekeringan Ringan,145,129,101,0.7829,0.6966,0.7372
+SN_Ngawi,Ngawi,Normal,344,381,327,0.8583,0.9506,0.9021
+SN_Ngawi,Ngawi,Basah Ringan,270,268,247,0.9216,0.9148,0.9182
+SN_Ngawi,Ngawi,Basah Sedang,146,150,133,0.8867,0.911,0.8986
+SN_Ngawi,Ngawi,Basah Parah,16,10,10,1.0,0.625,0.7692
+SN_Ngawi,Ngawi,Basah Ekstrem,0,0,0,0.0,0.0,0.0
+SN_Tuban,Tuban,Kekeringan Ekstrem,2,0,0,0.0,0.0,0.0
+SN_Tuban,Tuban,Kekeringan Parah,42,24,20,0.8333,0.4762,0.6061
+SN_Tuban,Tuban,Kekeringan Sedang,54,68,37,0.5441,0.6852,0.6066
+SN_Tuban,Tuban,Kekeringan Ringan,119,128,105,0.8203,0.8824,0.8502
+SN_Tuban,Tuban,Normal,292,270,251,0.9296,0.8596,0.8932
+SN_Tuban,Tuban,Basah Ringan,237,221,179,0.81,0.7553,0.7817
+SN_Tuban,Tuban,Basah Sedang,240,280,228,0.8143,0.95,0.8769
+SN_Tuban,Tuban,Basah Parah,17,12,9,0.75,0.5294,0.6207
+SN_Tuban,Tuban,Basah Ekstrem,0,0,0,0.0,0.0,0.0

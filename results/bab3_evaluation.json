@@ -1,0 +1,408 @@
+{
+  "reference": "BAB III (Metode Penelitian): 3.8.1 comparison, 3.8.2 event verification",
+  "thresholds": {
+    "moderate_drought": -1.0,
+    "severe_drought": -1.5
+  },
+  "tft": {
+    "all_horizons": {
+      "rmse": 0.43828519428477414,
+      "mae": 0.3142867479992899,
+      "r2": 0.7340987409188522,
+      "bias": 0.07601843807777144,
+      "pearson_r": 0.8803115400176882,
+      "metric": "all_horizons (t+1..t+30)",
+      "skill_score": 0.1994962912669862,
+      "n_samples": 105450,
+      "note": "TFT P50 point forecast aggregated over all 30 horizons (fair \u00a73.8.1 comparison). Artifact results/full_eval_20260602_063310/metrics_summary.json."
+    },
+    "step0": {
+      "rmse": 0.33750606898521146,
+      "mae": 0.2214862537701366,
+      "r2": 0.8814090485883944,
+      "bias": 0.08839070702006294,
+      "pearson_r": 0.9482500551466958,
+      "n": 3515,
+      "metric": "step0 (t+1 only)"
+    }
+  },
+  "tft_event_metrics": {
+    "scope_note": "step0 = t+1 saja (prediksi baris pertama tiap window); all_horizons = t+1..t+30 di-pool. Jangan bandingkan keduanya.",
+    "step0": {
+      "<=-1.0": {
+        "hits": 216,
+        "misses": 68,
+        "false_alarms": 51,
+        "correct_negatives": 3180,
+        "pod": 0.7605633802816901,
+        "far": 0.19101123595505617,
+        "csi": 0.6447761194029851,
+        "f1": 0.7840290381125227,
+        "threshold": -1.0,
+        "n": 3515,
+        "per_group": {
+          "group_col": "super_node_id",
+          "groups": {
+            "SN_Bojonegoro": {
+              "hits": 49,
+              "misses": 16,
+              "false_alarms": 5,
+              "correct_negatives": 633,
+              "pod": 0.7538461538461538,
+              "far": 0.09259259259259259,
+              "csi": 0.7,
+              "f1": 0.8235294117647058,
+              "threshold": -1.0,
+              "n": 703
+            },
+            "SN_Lamongan": {
+              "hits": 6,
+              "misses": 13,
+              "false_alarms": 0,
+              "correct_negatives": 684,
+              "pod": 0.3157894736842105,
+              "far": 0.0,
+              "csi": 0.3157894736842105,
+              "f1": 0.48,
+              "threshold": -1.0,
+              "n": 703
+            },
+            "SN_Nganjuk": {
+              "hits": 105,
+              "misses": 15,
+              "false_alarms": 29,
+              "correct_negatives": 554,
+              "pod": 0.875,
+              "far": 0.21641791044776118,
+              "csi": 0.7046979865771812,
+              "f1": 0.8267716535433071,
+              "threshold": -1.0,
+              "n": 703
+            },
+            "SN_Ngawi": {
+              "hits": 52,
+              "misses": 11,
+              "false_alarms": 17,
+              "correct_negatives": 623,
+              "pod": 0.8253968253968254,
+              "far": 0.2463768115942029,
+              "csi": 0.65,
+              "f1": 0.7878787878787878,
+              "threshold": -1.0,
+              "n": 703
+            },
+            "SN_Tuban": {
+              "hits": 4,
+              "misses": 13,
+              "false_alarms": 0,
+              "correct_negatives": 686,
+              "pod": 0.23529411764705882,
+              "far": 0.0,
+              "csi": 0.23529411764705882,
+              "f1": 0.38095238095238093,
+              "threshold": -1.0,
+              "n": 703
+            }
+          }
+        }
+      },
+      "<=-1.5": {
+        "hits": 110,
+        "misses": 33,
+        "false_alarms": 45,
+        "correct_negatives": 3327,
+        "pod": 0.7692307692307693,
+        "far": 0.2903225806451613,
+        "csi": 0.5851063829787234,
+        "f1": 0.738255033557047,
+        "threshold": -1.5,
+        "n": 3515,
+        "per_group": {
+          "group_col": "super_node_id",
+          "groups": {
+            "SN_Bojonegoro": {
+              "hits": 23,
+              "misses": 15,
+              "false_alarms": 0,
+              "correct_negatives": 665,
+              "pod": 0.6052631578947368,
+              "far": 0.0,
+              "csi": 0.6052631578947368,
+              "f1": 0.7540983606557377,
+              "threshold": -1.5,
+              "n": 703
+            },
+            "SN_Lamongan": {
+              "hits": 0,
+              "misses": 5,
+              "false_alarms": 0,
+              "correct_negatives": 698,
+              "pod": 0.0,
+              "far": null,
+              "csi": 0.0,
+              "f1": 0.0,
+              "threshold": -1.5,
+              "n": 703
+            },
+            "SN_Nganjuk": {
+              "hits": 46,
+              "misses": 7,
+              "false_alarms": 27,
+              "correct_negatives": 623,
+              "pod": 0.8679245283018868,
+              "far": 0.3698630136986301,
+              "csi": 0.575,
+              "f1": 0.7301587301587301,
+              "threshold": -1.5,
+              "n": 703
+            },
+            "SN_Ngawi": {
+              "hits": 41,
+              "misses": 0,
+              "false_alarms": 18,
+              "correct_negatives": 644,
+              "pod": 1.0,
+              "far": 0.3050847457627119,
+              "csi": 0.6949152542372882,
+              "f1": 0.82,
+              "threshold": -1.5,
+              "n": 703
+            },
+            "SN_Tuban": {
+              "hits": 0,
+              "misses": 6,
+              "false_alarms": 0,
+              "correct_negatives": 697,
+              "pod": 0.0,
+              "far": null,
+              "csi": 0.0,
+              "f1": 0.0,
+              "threshold": -1.5,
+              "n": 703
+            }
+          }
+        }
+      },
+      "scope": "step0",
+      "n_samples": 3515
+    },
+    "all_horizons": {
+      "severe_1.5": {
+        "overall_all_horizons": {
+          "hits": 2044,
+          "misses": 775,
+          "false_alarms": 2016,
+          "pod": 0.7250798155374246,
+          "far": 0.496551724137931,
+          "f1": 0.5942724233173426,
+          "csi": 0.42275077559462254
+        },
+        "per_city_step0": {
+          "Bojonegoro": {
+            "hits": 23,
+            "misses": 15,
+            "false_alarms": 0,
+            "pod": 0.6052631578947368,
+            "far": 0.0,
+            "f1": 0.7540983606557378,
+            "csi": 0.6052631578947368
+          },
+          "Lamongan": {
+            "hits": 0,
+            "misses": 5,
+            "false_alarms": 0,
+            "pod": 0.0,
+            "far": null,
+            "f1": null,
+            "csi": 0.0
+          },
+          "Nganjuk": {
+            "hits": 46,
+            "misses": 7,
+            "false_alarms": 27,
+            "pod": 0.8679245283018868,
+            "far": 0.3698630136986301,
+            "f1": 0.73015873015873,
+            "csi": 0.575
+          },
+          "Ngawi": {
+            "hits": 41,
+            "misses": 0,
+            "false_alarms": 18,
+            "pod": 1.0,
+            "far": 0.3050847457627119,
+            "f1": 0.8200000000000001,
+            "csi": 0.6949152542372882
+          },
+          "Tuban": {
+            "hits": 0,
+            "misses": 6,
+            "false_alarms": 0,
+            "pod": 0.0,
+            "far": null,
+            "f1": null,
+            "csi": 0.0
+          }
+        }
+      },
+      "moderate_1.0": {
+        "overall_all_horizons": {
+          "hits": 4075,
+          "misses": 2741,
+          "false_alarms": 1960,
+          "pod": 0.5978579812206573,
+          "far": 0.3247721623860812,
+          "f1": 0.6341918916815811,
+          "csi": 0.464334548769371
+        },
+        "per_city_step0": {
+          "Bojonegoro": {
+            "hits": 49,
+            "misses": 16,
+            "false_alarms": 5,
+            "pod": 0.7538461538461538,
+            "far": 0.09259259259259259,
+            "f1": 0.8235294117647058,
+            "csi": 0.7
+          },
+          "Lamongan": {
+            "hits": 6,
+            "misses": 13,
+            "false_alarms": 0,
+            "pod": 0.3157894736842105,
+            "far": 0.0,
+            "f1": 0.4799999999999999,
+            "csi": 0.3157894736842105
+          },
+          "Nganjuk": {
+            "hits": 105,
+            "misses": 15,
+            "false_alarms": 29,
+            "pod": 0.875,
+            "far": 0.21641791044776118,
+            "f1": 0.8267716535433071,
+            "csi": 0.7046979865771812
+          },
+          "Ngawi": {
+            "hits": 52,
+            "misses": 11,
+            "false_alarms": 17,
+            "pod": 0.8253968253968254,
+            "far": 0.2463768115942029,
+            "f1": 0.787878787878788,
+            "csi": 0.65
+          },
+          "Tuban": {
+            "hits": 4,
+            "misses": 13,
+            "false_alarms": 0,
+            "pod": 0.23529411764705882,
+            "far": 0.0,
+            "f1": 0.38095238095238093,
+            "csi": 0.23529411764705882
+          }
+        }
+      }
+    }
+  },
+  "arima_lstm": {
+    "rmse": 0.594062358923355,
+    "mae": 0.457981306375765,
+    "r2": 0.2870323617757936,
+    "pearson_r": 0.7650827337259254,
+    "n_samples": 91950,
+    "note": "Hybrid statsmodels ARIMA(2,1,0) + PyTorch LSTM residual model with iterative multi-step forecasting across 30 horizons on test.",
+    "per_super_node": {
+      "SN_Bojonegoro": {
+        "rmse": 0.5708270998644656,
+        "mae": 0.4378263585064458,
+        "r2": 0.34964011100060266,
+        "pearson_r": 0.7705329284372947,
+        "bias": -0.2984892280070836,
+        "n_samples": 18390
+      },
+      "SN_Lamongan": {
+        "rmse": 0.5547049049361716,
+        "mae": 0.4255557726893177,
+        "r2": 0.4368447754290712,
+        "pearson_r": 0.8184114694127262,
+        "bias": -0.3202468681388955,
+        "n_samples": 18390
+      },
+      "SN_Nganjuk": {
+        "rmse": 0.6167493197366047,
+        "mae": 0.47086324336828655,
+        "r2": 0.4096926274388285,
+        "pearson_r": 0.7786487896095508,
+        "bias": -0.30250967409836144,
+        "n_samples": 18390
+      },
+      "SN_Ngawi": {
+        "rmse": 0.5872015891781398,
+        "mae": 0.4513580204491539,
+        "r2": 0.060367209421474444,
+        "pearson_r": 0.6996420124674207,
+        "bias": -0.33256478959911095,
+        "n_samples": 18390
+      },
+      "SN_Tuban": {
+        "rmse": 0.6370430850571128,
+        "mae": 0.5043031368656211,
+        "r2": -0.6974430091847916,
+        "pearson_r": 0.5818786087729293,
+        "bias": -0.42415461815901834,
+        "n_samples": 18390
+      }
+    }
+  },
+  "xgboost": {
+    "rmse": 0.4001115784850626,
+    "mae": 0.2938381299596653,
+    "r2": 0.6765791715636355,
+    "pearson_r": 0.8281051001204628,
+    "n_samples": 91950,
+    "note": "Direct multi-horizon XGBoost (tree_method='hist') fitted per super_node on train (year < 2023) and evaluated on test (year >= 2024) across 30 horizons.",
+    "per_super_node": {
+      "SN_Bojonegoro": {
+        "rmse": 0.3990681861626148,
+        "mae": 0.2891591037020728,
+        "r2": 0.6821378647009904,
+        "pearson_r": 0.8311927301407374,
+        "bias": -0.0444336900232666,
+        "n_samples": 18390
+      },
+      "SN_Lamongan": {
+        "rmse": 0.37460712155029985,
+        "mae": 0.2838542612297865,
+        "r2": 0.7431638423751791,
+        "pearson_r": 0.86639781720737,
+        "bias": -0.059977284451206155,
+        "n_samples": 18390
+      },
+      "SN_Nganjuk": {
+        "rmse": 0.4492710975516288,
+        "mae": 0.3334743071540424,
+        "r2": 0.6867595710166692,
+        "pearson_r": 0.8296715143775215,
+        "bias": -0.03108529810755842,
+        "n_samples": 18390
+      },
+      "SN_Ngawi": {
+        "rmse": 0.4015132729179131,
+        "mae": 0.2956703851625626,
+        "r2": 0.5606774129652692,
+        "pearson_r": 0.7734801387704476,
+        "bias": -0.07827808474555763,
+        "n_samples": 18390
+      },
+      "SN_Tuban": {
+        "rmse": 0.3712183131813702,
+        "mae": 0.26703259254986206,
+        "r2": 0.423610081472645,
+        "pearson_r": 0.7057013467169219,
+        "bias": -0.06543408168405719,
+        "n_samples": 18390
+      }
+    }
+  }
+}
